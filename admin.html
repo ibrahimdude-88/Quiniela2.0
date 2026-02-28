@@ -7,8 +7,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Quiniela 26" />
-    <link rel="icon" type="image/png" sizes="192x192" href="favicon.png?v=5" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=5" />
+    <link rel="icon" type="image/png" sizes="192x192" href="favicon-v6.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon-v6.png" />
     <title>Quiniela Mundialista 2026 - Admin</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
@@ -140,10 +140,15 @@
             if (section.classList.contains('is-collapsed')) {
                 section.classList.remove('is-collapsed');
                 content.classList.remove('hidden-section');
-                // Temporarily set max-height to let transition happen
+                // Ensure overflow hidden during transition
+                content.style.overflow = 'hidden';
                 content.style.maxHeight = content.scrollHeight + 'px';
-                setTimeout(() => { content.style.maxHeight = 'none'; }, 300);
+                setTimeout(() => {
+                    content.style.maxHeight = 'none';
+                    content.style.overflow = 'visible'; // Allow flex contents to breathe 
+                }, 300);
             } else {
+                content.style.overflow = 'hidden';
                 content.style.maxHeight = content.scrollHeight + 'px'; // Fix height before collapse
                 // Force reflow
                 content.offsetHeight;
