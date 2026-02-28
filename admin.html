@@ -104,6 +104,50 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <!-- Supabase Logic -->
     <script type="module" src="./admin.js"></script>
+    <style>
+        .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .is-collapsed .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .collapsible-content.hidden-section {
+            max-height: 0 !important;
+            opacity: 0;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            border: none !important;
+        }
+    </style>
+    <script>
+        function toggleSection(elementId) {
+            const section = document.getElementById(elementId);
+            const content = document.getElementById('content-' + elementId);
+
+            if (section.classList.contains('is-collapsed')) {
+                section.classList.remove('is-collapsed');
+                content.classList.remove('hidden-section');
+                // Temporarily set max-height to let transition happen
+                content.style.maxHeight = content.scrollHeight + 'px';
+                setTimeout(() => { content.style.maxHeight = 'none'; }, 300);
+            } else {
+                content.style.maxHeight = content.scrollHeight + 'px'; // Fix height before collapse
+                // Force reflow
+                content.offsetHeight;
+
+                section.classList.add('is-collapsed');
+                content.classList.add('hidden-section');
+            }
+        }
+    </script>
 </head>
 
 <body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen font-display">
@@ -136,11 +180,14 @@
         <!-- Top Actions -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Settings Card -->
-            <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl">
-                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <span class="material-icons text-primary">settings</span> Configuración General
+            <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl" id="sec-settings">
+                <h3 onclick="toggleSection('sec-settings')"
+                    class="text-lg font-bold text-white mb-4 flex items-center justify-between cursor-pointer group select-none">
+                    <div class="flex items-center gap-2"><span class="material-icons text-primary">settings</span>
+                        Configuración General</div>
+                    <span class="material-icons text-slate-500 group-hover:text-white toggle-icon">expand_less</span>
                 </h3>
-                <div class="space-y-4">
+                <div id="content-sec-settings" class="collapsible-content space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Costo de
                             Entrada ($)</label>
@@ -180,14 +227,18 @@
             </div>
 
             <!-- Testing & Maintenance Card -->
-            <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-4 opacity-5">
+            <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden"
+                id="sec-testing">
+                <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                     <span class="material-icons text-9xl">science</span>
                 </div>
-                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2 relative z-10">
-                    <span class="material-icons text-purple-400">biotech</span> Pruebas y Mantenimiento
+                <h3 onclick="toggleSection('sec-testing')"
+                    class="text-lg font-bold text-white mb-4 flex items-center justify-between relative z-10 cursor-pointer group select-none">
+                    <div class="flex items-center gap-2"><span class="material-icons text-purple-400">biotech</span>
+                        Pruebas y Mantenimiento</div>
+                    <span class="material-icons text-slate-500 group-hover:text-white toggle-icon">expand_less</span>
                 </h3>
-                <div class="space-y-3 relative z-10">
+                <div id="content-sec-testing" class="collapsible-content space-y-3 relative z-10">
                     <button onclick="createTestUsers()"
                         class="w-full py-3 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/50 text-purple-300 font-bold transition-all flex items-center justify-center gap-2 group">
                         <span class="material-icons group-hover:scale-110 transition-transform">person_add</span>
@@ -221,14 +272,19 @@
         </div>
 
         <!-- Previsualización de Modals -->
-        <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-5">
+        <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden"
+            id="sec-preview">
+            <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                 <span class="material-icons text-9xl">preview</span>
             </div>
-            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2 relative z-10">
-                <span class="material-icons text-pink-400">visibility</span> Previsualizar Modals de Ranking
+            <h3 onclick="toggleSection('sec-preview')"
+                class="text-lg font-bold text-white mb-4 flex items-center justify-between relative z-10 cursor-pointer group select-none">
+                <div class="flex items-center gap-2"><span class="material-icons text-pink-400">visibility</span>
+                    Previsualizar Modals de Ranking</div>
+                <span class="material-icons text-slate-500 group-hover:text-white toggle-icon">expand_less</span>
             </h3>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 relative z-10">
+            <div id="content-sec-preview"
+                class="collapsible-content grid grid-cols-2 sm:grid-cols-4 gap-4 relative z-10">
                 <button onclick="previewRankingModal(1)"
                     class="py-3 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/50 text-accent-gold font-bold transition-all flex flex-col items-center gap-2">
                     <span class="material-icons text-3xl">emoji_events</span>
@@ -253,128 +309,146 @@
         </div>
 
         <!-- Playoff Teams Management -->
-        <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-5">
+        <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden"
+            id="sec-playoff">
+            <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                 <span class="material-icons text-9xl">sports_soccer</span>
             </div>
-            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2 relative z-10">
-                <span class="material-icons text-yellow-400">emoji_events</span> Equipos de Repechaje
+            <h3 onclick="toggleSection('sec-playoff')"
+                class="text-lg font-bold text-white mb-4 flex items-center justify-between relative z-10 cursor-pointer group select-none">
+                <div class="flex items-center gap-2"><span class="material-icons text-yellow-400">emoji_events</span>
+                    Equipos de Repechaje</div>
+                <span class="material-icons text-slate-500 group-hover:text-white toggle-icon">expand_less</span>
             </h3>
-            <p class="text-xs text-slate-400 mb-4 relative z-10">
-                Actualiza los nombres de los equipos que clasificarán por repechaje (UEFA1, UEFA2, etc.)
-            </p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10" id="playoff-teams-container">
-                <!-- Loaded dynamically -->
+            <div id="content-sec-playoff" class="collapsible-content">
+                <p class="text-xs text-slate-400 mb-4 relative z-10">
+                    Actualiza los nombres de los equipos que clasificarán por repechaje (UEFA1, UEFA2, etc.)
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10" id="playoff-teams-container">
+                    <!-- Loaded dynamically -->
+                </div>
             </div>
         </div>
 
         <!-- Qualified Teams Management -->
         <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden"
-            id="qualified-teams-section">
-            <div class="absolute top-0 right-0 p-4 opacity-5">
+            id="sec-qualified">
+            <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                 <span class="material-icons text-9xl">list_alt</span>
             </div>
-            <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2 relative z-10">
-                <span class="material-icons text-teal-400">checklist</span> Gestión de Clasificados
+            <h3 onclick="toggleSection('sec-qualified')"
+                class="text-lg font-bold text-white mb-6 flex items-center justify-between relative z-10 cursor-pointer group select-none">
+                <div class="flex items-center gap-2"><span class="material-icons text-teal-400">checklist</span> Gestión
+                    de Clasificados</div>
+                <span class="material-icons text-slate-500 group-hover:text-white toggle-icon">expand_less</span>
             </h3>
 
-            <div class="flex flex-col lg:flex-row gap-6 items-start relative z-10">
-                <!-- Left Table: Qualified Teams -->
-                <div
-                    class="flex-1 w-full bg-background-dark/50 rounded-xl border border-white/5 overflow-hidden flex flex-col h-[400px]">
-                    <div class="p-4 bg-emerald-500/10 border-b border-white/5 flex justify-between items-center">
-                        <h4 class="font-bold text-emerald-400 text-sm uppercase tracking-wider flex items-center gap-2">
-                            <span class="material-icons text-sm">verified</span> Clasificados (1º, 2º y Mejores 3º)
-                        </h4>
-                        <span id="qualified-count"
-                            class="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">0</span>
+            <div id="content-sec-qualified" class="collapsible-content relative z-10">
+                <div class="flex flex-col lg:flex-row gap-6 items-start">
+                    <!-- Left Table: Qualified Teams -->
+                    <div
+                        class="flex-1 w-full bg-background-dark/50 rounded-xl border border-white/5 overflow-hidden flex flex-col h-[400px]">
+                        <div class="p-4 bg-emerald-500/10 border-b border-white/5 flex justify-between items-center">
+                            <h4
+                                class="font-bold text-emerald-400 text-sm uppercase tracking-wider flex items-center gap-2">
+                                <span class="material-icons text-sm">verified</span> Clasificados (1º, 2º y Mejores 3º)
+                            </h4>
+                            <span id="qualified-count"
+                                class="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">0</span>
+                        </div>
+                        <div class="overflow-y-auto flex-1 custom-scrollbar">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="sticky top-0 bg-background-dark z-10">
+                                    <tr
+                                        class="text-[10px] uppercase text-slate-500 font-bold tracking-wider border-b border-white/5">
+                                        <th class="p-3 w-10">#</th>
+                                        <th class="p-3">Selección</th>
+                                        <th class="p-3 w-16 text-center">Grp</th>
+                                        <th class="p-3 w-16 text-center">Pos</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="qualified-teams-body" class="text-xs divide-y divide-white/5 text-slate-300">
+                                    <!-- Loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="overflow-y-auto flex-1 custom-scrollbar">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="sticky top-0 bg-background-dark z-10">
-                                <tr
-                                    class="text-[10px] uppercase text-slate-500 font-bold tracking-wider border-b border-white/5">
-                                    <th class="p-3 w-10">#</th>
-                                    <th class="p-3">Selección</th>
-                                    <th class="p-3 w-16 text-center">Grp</th>
-                                    <th class="p-3 w-16 text-center">Pos</th>
-                                </tr>
-                            </thead>
-                            <tbody id="qualified-teams-body" class="text-xs divide-y divide-white/5 text-slate-300">
-                                <!-- Loaded dynamically -->
-                            </tbody>
-                        </table>
+
+                    <!-- Center Controls -->
+                    <div class="flex lg:flex-col justify-center items-center gap-4 py-4">
+                        <button id="move-to-qualified-btn" onclick="moveSelectedToQualified()" disabled
+                            class="w-12 h-12 rounded-full bg-surface-dark border border-white/10 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-slate-500 hover:text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center group"
+                            title="Mover seleccionado a Clasificados">
+                            <span
+                                class="material-icons transform rotate-90 lg:rotate-0 group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                        </button>
+
+                        <button id="remove-from-qualified-btn" onclick="removeSelectedFromQualified()" disabled
+                            class="w-12 h-12 rounded-full bg-surface-dark border border-white/10 hover:border-red-500/50 hover:bg-red-500/10 text-slate-500 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center group hidden"
+                            title="Regresar a Terceros">
+                            <span
+                                class="material-icons transform rotate-90 lg:rotate-0 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </button>
+                    </div>
+
+                    <!-- Right Table: Third Place Candidates -->
+                    <div
+                        class="flex-1 w-full bg-background-dark/50 rounded-xl border border-white/5 overflow-hidden flex flex-col h-[400px]">
+                        <div class="p-4 bg-yellow-500/10 border-b border-white/5 flex justify-between items-center">
+                            <h4
+                                class="font-bold text-yellow-400 text-sm uppercase tracking-wider flex items-center gap-2">
+                                <span class="material-icons text-sm">low_priority</span> 3ros Lugares Disponibles
+                            </h4>
+                            <span id="third-place-count"
+                                class="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">0</span>
+                        </div>
+                        <div class="overflow-y-auto flex-1 custom-scrollbar">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="sticky top-0 bg-background-dark z-10">
+                                    <tr
+                                        class="text-[10px] uppercase text-slate-500 font-bold tracking-wider border-b border-white/5">
+                                        <th class="p-3 w-10">Sel</th>
+                                        <th class="p-3">Selección</th>
+                                        <th class="p-3 w-16 text-center">Grp</th>
+                                        <th class="p-3 w-16 text-center">Pts</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="third-place-body" class="text-xs divide-y divide-white/5 text-slate-300">
+                                    <!-- Loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Center Controls -->
-                <div class="flex lg:flex-col justify-center items-center gap-4 py-4">
-                    <button id="move-to-qualified-btn" onclick="moveSelectedToQualified()" disabled
-                        class="w-12 h-12 rounded-full bg-surface-dark border border-white/10 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-slate-500 hover:text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center group"
-                        title="Mover seleccionado a Clasificados">
-                        <span
-                            class="material-icons transform rotate-90 lg:rotate-0 group-hover:-translate-x-1 transition-transform">arrow_back</span>
-                    </button>
-
-                    <button id="remove-from-qualified-btn" onclick="removeSelectedFromQualified()" disabled
-                        class="w-12 h-12 rounded-full bg-surface-dark border border-white/10 hover:border-red-500/50 hover:bg-red-500/10 text-slate-500 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center group hidden"
-                        title="Regresar a Terceros">
-                        <span
-                            class="material-icons transform rotate-90 lg:rotate-0 group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                    </button>
-                </div>
-
-                <!-- Right Table: Third Place Candidates -->
-                <div
-                    class="flex-1 w-full bg-background-dark/50 rounded-xl border border-white/5 overflow-hidden flex flex-col h-[400px]">
-                    <div class="p-4 bg-yellow-500/10 border-b border-white/5 flex justify-between items-center">
-                        <h4 class="font-bold text-yellow-400 text-sm uppercase tracking-wider flex items-center gap-2">
-                            <span class="material-icons text-sm">low_priority</span> 3ros Lugares Disponibles
-                        </h4>
-                        <span id="third-place-count"
-                            class="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">0</span>
-                    </div>
-                    <div class="overflow-y-auto flex-1 custom-scrollbar">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="sticky top-0 bg-background-dark z-10">
-                                <tr
-                                    class="text-[10px] uppercase text-slate-500 font-bold tracking-wider border-b border-white/5">
-                                    <th class="p-3 w-10">Sel</th>
-                                    <th class="p-3">Selección</th>
-                                    <th class="p-3 w-16 text-center">Grp</th>
-                                    <th class="p-3 w-16 text-center">Pts</th>
-                                </tr>
-                            </thead>
-                            <tbody id="third-place-body" class="text-xs divide-y divide-white/5 text-slate-300">
-                                <!-- Loaded dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <p class="text-[10px] text-slate-500 mt-4 text-center">
+                    * Los 1ros y 2dos lugares se agregan automáticamente. Selecciona un 3er lugar de la derecha y usa la
+                    flecha para clasificarlo.
+                </p>
             </div>
-            <p class="text-[10px] text-slate-500 mt-4 text-center">
-                * Los 1ros y 2dos lugares se agregan automáticamente. Selecciona un 3er lugar de la derecha y usa la
-                flecha para clasificarlo.
-            </p>
         </div>
 
         <!-- Bracket Management -->
-        <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-5">
+        <div class="bg-surface-dark rounded-2xl p-6 border border-white/5 shadow-xl relative overflow-hidden"
+            id="sec-bracket">
+            <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                 <span class="material-icons text-9xl">account_tree</span>
             </div>
-            <h3 class="text-lg font-bold text-white mb-6 flex items-center justify-between relative z-10 w-full">
+            <h3 onclick="toggleSection('sec-bracket')"
+                class="text-lg font-bold text-white mb-6 flex flex-wrap items-center justify-between relative z-10 w-full cursor-pointer group select-none">
                 <div class="flex items-center gap-2">
                     <span class="material-icons text-indigo-400">lan</span> Gestión de Llaves de Eliminatorias
                 </div>
-                <button onclick="automateBracket()"
-                    class="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all">
-                    <span class="material-icons text-sm">auto_fix_high</span>
-                    Autocompletar
-                </button>
+                <div class="flex items-center gap-4">
+                    <button onclick="event.stopPropagation(); automateBracket()"
+                        class="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all">
+                        <span class="material-icons text-sm">auto_fix_high</span>
+                        Autocompletar
+                    </button>
+                    <span class="material-icons text-slate-500 group-hover:text-white toggle-icon">expand_less</span>
+                </div>
             </h3>
 
-            <div class="relative z-10">
+            <div id="content-sec-bracket" class="collapsible-content relative z-10">
                 <!-- Round Selector -->
                 <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-2" id="bracket-round-selector">
                     <button onclick="loadBracketEditor(4)"
@@ -411,9 +485,9 @@
         </div>
 
         <!-- Match Management -->
-        <div class="bg-surface-dark rounded-2xl border border-white/5 shadow-xl overflow-hidden">
-            <div
-                class="p-6 border-b border-white/5 bg-background-dark/50 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="bg-surface-dark rounded-2xl border border-white/5 shadow-xl overflow-hidden" id="sec-matches">
+            <div onclick="if(event.target.tagName !== 'INPUT' && !event.target.closest('button') && !event.target.closest('label')) toggleSection('sec-matches')"
+                class="p-6 border-b border-white/5 bg-background-dark/50 flex flex-col md:flex-row justify-between items-center gap-4 cursor-pointer group select-none">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
                     <span class="material-icons text-blue-400">edit_calendar</span> Gestión de Partidos
                     <label
@@ -424,108 +498,123 @@
                         <span class="text-xs font-bold text-slate-400 select-none">Ver Guardados</span>
                     </label>
                 </h3>
-                <div class="flex items-center gap-1 bg-background-dark rounded-lg p-1 border border-white/10 overflow-x-auto max-w-full no-scrollbar"
-                    id="admin-matchday-filters">
-                    <button data-matchday="1"
-                        class="px-3 py-1.5 rounded-md text-xs font-bold bg-blue-500 text-white shadow-lg whitespace-nowrap flex-shrink-0">J1</button>
-                    <button data-matchday="2"
-                        class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">J2</button>
-                    <button data-matchday="3"
-                        class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">J3</button>
-                    <div class="w-px h-6 bg-white/10 mx-1 flex-shrink-0 hidden md:block"></div>
-                    <button data-matchday="4"
-                        class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">16v</button>
-                    <button data-matchday="5"
-                        class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">8v</button>
-                    <button data-matchday="6"
-                        class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">4tos</button>
-                    <button data-matchday="7"
-                        class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">Sem</button>
-                    <button data-matchday="8"
-                        class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">Fin</button>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1 bg-background-dark rounded-lg p-1 border border-white/10 overflow-x-auto max-w-full no-scrollbar"
+                        id="admin-matchday-filters">
+                        <button data-matchday="1"
+                            class="px-3 py-1.5 rounded-md text-xs font-bold bg-blue-500 text-white shadow-lg whitespace-nowrap flex-shrink-0">J1</button>
+                        <button data-matchday="2"
+                            class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">J2</button>
+                        <button data-matchday="3"
+                            class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">J3</button>
+                        <div class="w-px h-6 bg-white/10 mx-1 flex-shrink-0 hidden md:block"></div>
+                        <button data-matchday="4"
+                            class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">16v</button>
+                        <button data-matchday="5"
+                            class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">8v</button>
+                        <button data-matchday="6"
+                            class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">4tos</button>
+                        <button data-matchday="7"
+                            class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">Sem</button>
+                        <button data-matchday="8"
+                            class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 whitespace-nowrap flex-shrink-0">Fin</button>
+                    </div>
+                    <span class="material-icons text-slate-500 group-hover:text-white toggle-icon">expand_less</span>
                 </div>
             </div>
 
-            <div class="p-6">
-                <!-- Group Tabs -->
-                <div class="flex gap-2 mb-6 overflow-x-auto pb-2" id="group-tabs">
-                    <!-- Loaded dynamically -->
-                </div>
-
-                <!-- Matches Table -->
-                <div class="bg-background-dark/30 rounded-xl border border-white/5 overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-background-dark/50 border-b border-white/5">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Fecha
-                                    </th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">Local
-                                    </th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase"
-                                        colspan="3">Resultado</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">
-                                        Visitante</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">Estado
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="matches-table-body">
-                                <!-- Loaded dynamically -->
-                            </tbody>
-                        </table>
+            <div id="content-sec-matches" class="collapsible-content">
+                <div class="p-6">
+                    <!-- Group Tabs -->
+                    <div class="flex gap-2 mb-6 overflow-x-auto pb-2" id="group-tabs">
+                        <!-- Loaded dynamically -->
                     </div>
-                </div>
 
-                <!-- Save Button -->
-                <div class="mt-6 flex items-center justify-between gap-4">
-                    <p class="text-xs text-slate-500 hidden md:block">
-                        💡 Usa <kbd class="px-2 py-1 bg-white/10 rounded text-xs font-mono">Tab</kbd> para navegar
-                        rápidamente entre campos
-                    </p>
-                    <div class="flex items-center gap-3 ml-auto">
-                        <button id="clear-results-btn" onclick="clearResults()"
-                            class="px-4 py-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-400 font-bold transition-all transform hover:scale-105 flex items-center gap-2">
-                            <span class="material-icons">backspace</span>
-                            BORRAR
-                        </button>
-                        <button id="save-all-results-btn" onclick="saveAllResults()"
-                            class="px-8 py-3 rounded-lg bg-green-500 hover:bg-green-400 text-white font-bold shadow-lg shadow-green-500/20 transition-all transform hover:scale-105 flex items-center gap-2">
-                            <span class="material-icons">save</span>
-                            GUARDAR RESULTADOS
-                        </button>
+                    <!-- Matches Table -->
+                    <div class="bg-background-dark/30 rounded-xl border border-white/5 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-background-dark/50 border-b border-white/5">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Fecha
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">
+                                            Local
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase"
+                                            colspan="3">Resultado</th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">
+                                            Visitante</th>
+                                        <th class="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">
+                                            Estado
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="matches-table-body">
+                                    <!-- Loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
+
+                    <!-- Save Button -->
+                    <div class="mt-6 flex items-center justify-between gap-4">
+                        <p class="text-xs text-slate-500 hidden md:block">
+                            💡 Usa <kbd class="px-2 py-1 bg-white/10 rounded text-xs font-mono">Tab</kbd> para navegar
+                            rápidamente entre campos
+                        </p>
+                        <div class="flex items-center gap-3 ml-auto">
+                            <button id="clear-results-btn" onclick="clearResults()"
+                                class="px-4 py-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-400 font-bold transition-all transform hover:scale-105 flex items-center gap-2">
+                                <span class="material-icons">backspace</span>
+                                BORRAR
+                            </button>
+                            <button id="save-all-results-btn" onclick="saveAllResults()"
+                                class="px-8 py-3 rounded-lg bg-green-500 hover:bg-green-400 text-white font-bold shadow-lg shadow-green-500/20 transition-all transform hover:scale-105 flex items-center gap-2">
+                                <span class="material-icons">save</span>
+                                GUARDAR RESULTADOS
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 text-center mt-2">Los puntos se calcularán automáticamente para
+                        todos
+                        los jugadores</p>
                 </div>
-                <p class="text-xs text-slate-500 text-center mt-2">Los puntos se calcularán automáticamente para todos
-                    los jugadores</p>
             </div>
         </div>
 
         <!-- Users List -->
-        <div class="bg-surface-dark rounded-2xl border border-white/5 shadow-xl overflow-hidden">
-            <div class="p-6 border-b border-white/5 flex justify-between items-center">
+        <div class="bg-surface-dark rounded-2xl border border-white/5 shadow-xl overflow-hidden" id="sec-users">
+            <div onclick="toggleSection('sec-users')"
+                class="p-6 border-b border-white/5 flex justify-between items-center cursor-pointer group select-none">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
                     <span class="material-icons text-emerald-400">group</span> Usuarios Registrados
                 </h3>
-                <span id="user-count-badge" class="px-3 py-1 rounded-full bg-white/5 text-xs font-bold text-slate-400">0
-                    Usuarios</span>
+                <div class="flex items-center gap-4">
+                    <span id="user-count-badge"
+                        class="px-3 py-1 rounded-full bg-white/5 text-xs font-bold text-slate-400">0
+                        Usuarios</span>
+                    <span class="material-icons text-slate-500 group-hover:text-white toggle-icon">expand_less</span>
+                </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-background-dark text-xs uppercase text-slate-500 font-bold tracking-wider">
-                            <th class="p-4 border-b border-white/5">Usuario</th>
-                            <th class="p-4 border-b border-white/5 text-center">Pago</th>
-                            <th class="p-4 border-b border-white/5 text-center">Puntos</th>
-                            <th class="p-4 border-b border-white/5 text-center">Exactos</th>
-                            <th class="p-4 border-b border-white/5 text-center">Pronósticos</th>
-                            <th class="p-4 border-b border-white/5 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-table-body" class="text-sm divide-y divide-white/5 text-slate-300">
-                        <!-- Loaded dynamically -->
-                    </tbody>
-                </table>
+            <div id="content-sec-users" class="collapsible-content">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-background-dark text-xs uppercase text-slate-500 font-bold tracking-wider">
+                                <th class="p-4 border-b border-white/5">Usuario</th>
+                                <th class="p-4 border-b border-white/5 text-center">Pago</th>
+                                <th class="p-4 border-b border-white/5 text-center">Puntos</th>
+                                <th class="p-4 border-b border-white/5 text-center">Exactos</th>
+                                <th class="p-4 border-b border-white/5 text-center">Pronósticos</th>
+                                <th class="p-4 border-b border-white/5 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body" class="text-sm divide-y divide-white/5 text-slate-300">
+                            <!-- Loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
