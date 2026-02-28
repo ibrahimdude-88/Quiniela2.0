@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>World Cup 2026 - Admin Control Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#10b748",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "surface-dark": "#162e1e",
+                        "border-dark": "#1f3d28",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1f3d28;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 min-h-screen flex font-display">
+<!-- Sidebar Navigation -->
+<aside class="w-20 lg:w-64 border-r border-primary/10 bg-background-light dark:bg-background-dark flex flex-col items-center lg:items-start py-8 px-4 hidden md:flex">
+<div class="flex items-center gap-3 px-2 mb-10">
+<div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-icons text-white">sports_soccer</span>
+</div>
+<span class="text-xl font-bold tracking-tight hidden lg:block">WC 2026 Admin</span>
+</div>
+<nav class="flex-1 w-full space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary transition-all" href="#">
+<span class="material-icons">dashboard</span>
+<span class="font-medium hidden lg:block">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/5 text-slate-500 dark:text-slate-400 transition-all" href="#">
+<span class="material-icons">people</span>
+<span class="font-medium hidden lg:block">Users List</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/5 text-slate-500 dark:text-slate-400 transition-all" href="#">
+<span class="material-icons">emoji_events</span>
+<span class="font-medium hidden lg:block">Leaderboards</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/5 text-slate-500 dark:text-slate-400 transition-all" href="#">
+<span class="material-icons">payments</span>
+<span class="font-medium hidden lg:block">Transactions</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/5 text-slate-500 dark:text-slate-400 transition-all" href="#">
+<span class="material-icons">settings</span>
+<span class="font-medium hidden lg:block">System Config</span>
+</a>
+</nav>
+<div class="mt-auto w-full px-2">
+<div class="bg-surface-dark p-4 rounded-xl border border-primary/20 hidden lg:block">
+<p class="text-xs text-primary font-bold uppercase mb-1">Status</p>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+<span class="text-sm font-medium">Server Online</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-hidden">
+<!-- Top Header -->
+<header class="h-20 border-b border-primary/10 flex items-center justify-between px-8 bg-background-light/50 dark:bg-background-dark/50 backdrop-blur-md sticky top-0 z-10">
+<div>
+<h1 class="text-2xl font-bold tracking-tight">Admin Control Center</h1>
+<p class="text-xs text-slate-500 uppercase tracking-widest font-semibold">Tournament Quiniela Manager</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="bg-surface-dark border-none rounded-full pl-10 pr-4 py-2 text-sm w-64 focus:ring-1 focus:ring-primary" placeholder="Search user or email..." type="text"/>
+</div>
+<button class="w-10 h-10 rounded-full bg-surface-dark flex items-center justify-center relative">
+<span class="material-icons text-slate-400">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-background-dark"></span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-primary/10">
+<img class="w-10 h-10 rounded-full border-2 border-primary/50" data-alt="Admin user profile headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTh79jCA2Ap_btz0pLvx9PZJ2Zn8aa_e-i82T474-E0PRHRUtnWXKhqku8HYAK7hoQKJ5ECY6HCchaRvu109O5Z3-64eM8Dep3E3kSvJAjQ9YAglJ2POrkkdCjXkiN5qJ79Tq1BfU9whemdZFB_JyFJlepY_pQ1rL2MnNlOI8CTcXPLRUiiQAOc0CL2DQkORh8HJGGPo7IoXOJ23N6MH8f-IgENfwBWlWfng0sJgr9zxZdatzcT2ajQlcCsjkGIMXiQswqf32zu9ye"/>
+<div class="hidden lg:block">
+<p class="text-sm font-bold">Admin Root</p>
+<p class="text-xs text-primary">Super Admin</p>
+</div>
+</div>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<!-- Central Column: User Management -->
+<section class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+<!-- Quick Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="bg-surface-dark p-6 rounded-xl border border-primary/10 flex items-center gap-4">
+<div class="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center">
+<span class="material-icons text-primary">groups</span>
+</div>
+<div>
+<p class="text-slate-400 text-sm">Total Users</p>
+<p class="text-2xl font-bold leading-none">12,842</p>
+</div>
+</div>
+<div class="bg-surface-dark p-6 rounded-xl border border-primary/10 flex items-center gap-4">
+<div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+<span class="material-icons text-blue-500">score</span>
+</div>
+<div>
+<p class="text-slate-400 text-sm">Points Awarded</p>
+<p class="text-2xl font-bold leading-none">450.2k</p>
+</div>
+</div>
+<div class="bg-surface-dark p-6 rounded-xl border border-primary/10 flex items-center gap-4">
+<div class="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
+<span class="material-icons text-orange-500">pending_actions</span>
+</div>
+<div>
+<p class="text-slate-400 text-sm">Pending Verification</p>
+<p class="text-2xl font-bold leading-none">128</p>
+</div>
+</div>
+</div>
+<!-- Users Table -->
+<div class="bg-surface-dark rounded-xl border border-primary/10 overflow-hidden">
+<div class="p-6 border-b border-primary/10 flex items-center justify-between">
+<h2 class="font-bold flex items-center gap-2">
+<span class="material-icons text-primary">manage_accounts</span>
+                            User Permissions &amp; Standing
+                        </h2>
+<div class="flex gap-2">
+<button class="px-4 py-1.5 bg-background-dark border border-primary/20 rounded-full text-xs font-semibold hover:bg-primary/5 transition-colors">Export CSV</button>
+<button class="px-4 py-1.5 bg-background-dark border border-primary/20 rounded-full text-xs font-semibold hover:bg-primary/5 transition-colors">Bulk Action</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-background-dark/50 text-xs uppercase tracking-wider text-slate-400">
+<tr>
+<th class="px-6 py-4 font-semibold">User Details</th>
+<th class="px-6 py-4 font-semibold">Email</th>
+<th class="px-6 py-4 font-semibold">Total Points</th>
+<th class="px-6 py-4 font-semibold text-center">Status</th>
+<th class="px-6 py-4 font-semibold text-center">Pago Verificado</th>
+<th class="px-6 py-4 font-semibold text-center">Rol Admin</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-primary/5">
+<!-- User Row 1 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full" data-alt="User avatar male" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbuzmLMMUJJiR6oqFbauY7tQFizxfM2h-RcRdLxdIuO2tQk7xZSJFeGdeuLnIyn9n18qmlLtJoZMqK4rhkZyhHQteb2o7MVKK6sj8sXAeLm5WCp1G_joT5XMQa5gFzDURflChep-_xMvffbZG9-uLrPeG1DYWj87uYQU4hB114zbjnW7XCc-kZ9zSl8Tvw_YGBK7VMQ25TTfcJblMGwKGFDuIyq-8_UetdMuZurfiiUG2JGlgMRSmQ5Fqu0oNubqdt3sBHhXRbylUS"/>
+<span class="font-semibold text-sm">Alejandro Garcia</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-400">ale.garcia@gmail.com</td>
+<td class="px-6 py-4 text-sm font-bold text-primary">1,240 pts</td>
+<td class="px-6 py-4 text-center">
+<span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-primary/20 text-primary border border-primary/30">Active</span>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+</tr>
+<!-- User Row 2 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full" data-alt="User avatar female" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQm3avY_kqrSjLl3mHFq8WvzdR0C-RdgRKLvZsU5NeFFtxw0iaZOY3E0PRdxp7jLvA2dE52XlDxI8CaUR0dKAXheC7FFFdYZVwIsNLwZN_His44cHvdp1ZfP3YPatQQBfPgQsKofyoK7qoS4Jr_KD11YgXPP4KqNVmkDlQbETd3HfNMOytPhK-rfdPcCz-UW2F8Ss6LwBpJk-H_AXS0gbMNkZhdey-gF8t32wwMBz9hO-nP1X-en3Xy1iBO6z5WmIYxO8fz4KAxQkD"/>
+<span class="font-semibold text-sm">Mariana Rodriguez</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-400">m.rodriguez@outlook.com</td>
+<td class="px-6 py-4 text-sm font-bold text-primary">985 pts</td>
+<td class="px-6 py-4 text-center">
+<span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-primary/20 text-primary border border-primary/30">Active</span>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+</tr>
+<!-- User Row 3 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full" data-alt="User avatar male secondary" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZTAFVhjV2NarsyEY_frRRVYDBsFwvGm2sfS6vP67ZFVKLMU4W6DSRb8iFuFRpCkrKcMrqFLbglff066FSx41j5Gs8tw6GcitrP7vrbV_lNj4k8WAMxrh-lUOwJ8QdcSrcmjyqiBXzrN-10uxWSIyYG7fRnXLLR38jFIN6mQT42Gsnl58kQp-XTkCU1Ykoo1FQlOR1T_FgDYxDVCYpz1PHChrWSORKe7ng7rFhudRqkDLQkCUAKkRoFU6721UxDOd1Sb0KbOjkGG3r"/>
+<span class="font-semibold text-sm">Jean Dupont</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-400">j.dupont@company.fr</td>
+<td class="px-6 py-4 text-sm font-bold text-primary">450 pts</td>
+<td class="px-6 py-4 text-center">
+<span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-orange-500/20 text-orange-500 border border-orange-500/30">Pending</span>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+</tr>
+<!-- User Row 4 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full" data-alt="User avatar female secondary" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZA9xIhvCb0ob5K8971ULacg2TTExbBZ9eW3054NjJodJeFq5TYuIxe5FSjdfNpZq1Hnr16grz9TL3Lzim7dUgILvpihob3OvjLz8RGsycRHruNs93FFSogQlw3cxi9bvKgAN1SbnoGgVLOy5rM2J2qb6SpVPEDJ7bYOXfh8Sx1IsaSWvhNBI4bTxRO-IAlN1ZSh3xxPN2AVnUBMOJhq306rZGDSZrtKJReV0OQsHISq1KRLtt0y5BbLDggOqM1lEH-X0SK1Jp6HrH"/>
+<span class="font-semibold text-sm">Sarah Jenkins</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-400">sarah.j@email.co.uk</td>
+<td class="px-6 py-4 text-sm font-bold text-primary">2,110 pts</td>
+<td class="px-6 py-4 text-center">
+<span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-primary/20 text-primary border border-primary/30">Active</span>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-primary/10 flex items-center justify-between">
+<p class="text-xs text-slate-500 font-medium">Showing 4 of 12,842 users</p>
+<div class="flex gap-1">
+<button class="w-8 h-8 rounded bg-background-dark flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+<span class="material-icons text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white text-xs font-bold">1</button>
+<button class="w-8 h-8 rounded bg-background-dark flex items-center justify-center text-slate-400 hover:text-white transition-colors text-xs font-bold">2</button>
+<button class="w-8 h-8 rounded bg-background-dark flex items-center justify-center text-slate-400 hover:text-white transition-colors text-xs font-bold">3</button>
+<button class="w-8 h-8 rounded bg-background-dark flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+<span class="material-icons text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Sidebar Panel: Post-Match Result Update -->
+<section class="w-96 border-l border-primary/10 bg-surface-dark/30 p-8 overflow-y-auto hidden xl:block custom-scrollbar">
+<div class="sticky top-0">
+<div class="mb-8">
+<h3 class="text-lg font-bold mb-1">Post-Match Results</h3>
+<p class="text-xs text-slate-500">Input official scores to recalculate quiniela points across all users.</p>
+</div>
+<div class="space-y-6">
+<!-- Match Selector -->
+<div>
+<label class="block text-xs font-bold text-primary uppercase mb-2 tracking-wide">Select Match</label>
+<div class="relative group">
+<select class="w-full bg-background-dark border border-primary/20 rounded-xl py-3 px-4 text-sm appearance-none focus:ring-primary focus:border-primary">
+<option>Match 42: Mexico vs Poland</option>
+<option>Match 43: Argentina vs Saudi Arabia</option>
+<option>Match 44: France vs Australia</option>
+<option>Match 45: USA vs Wales</option>
+</select>
+<span class="material-icons absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Score Input Grid -->
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-3">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6" data-alt="Mexico national flag" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRrL9trsb3jhkJEeO1F_iDGKsE9PO3uG0wWhuntD52e-c2l7EgLZMKbKhpP3rs_jRPO4500YznHMYKWDBlnKto6eAiLG1PZpsuynT0dkTebQr5uVrx7cpnH2A2Mi0sklcR63YXT_dBY8RAIdicSZWCgj99ztc-8407_rLZBe1dn9Xv5mlmKns12Piuah6jOg31ucRr8-LtrOh5FKRLZgJFV8W-oJ5Xp6uHTeVQ4JMr8YlL3WNJlUs6ZjAHUCiQ608fExShhmlsPY7Z"/>
+<span class="text-xs font-bold">MEX</span>
+</div>
+<input class="w-full bg-background-dark border border-primary/20 rounded-xl py-4 text-center text-3xl font-bold focus:ring-primary focus:border-primary" placeholder="0" type="number"/>
+</div>
+<div class="space-y-3">
+<div class="flex items-center gap-2 justify-end">
+<span class="text-xs font-bold">POL</span>
+<img class="w-6 h-6" data-alt="Poland national flag" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTLAUATXw3xCkV1K35YwShsKLW2Y5i99rmjlD8fxQ8CL-PjfIPNlJS6DaWC0IQCGUMlvfCKJNGaon6ahl1ay-N8SyVcSTQ_SzBTiFyQ4S5YsV-MZ6-3tQ6waQWQ2QHUpNHlwpD4Ii7LlKQ79WPJebW5t4A-swYL7V1aOhsoUxevfnv7sN_mOi8yvzExlyHmCiUYrjUPKOJo-zguoZYenbPQFpEHrKCYjFQ5iN7X9cGzcH4cQxNGHuYqbkvRO6LUApq7HbmTv6qccjJ"/>
+</div>
+<input class="w-full bg-background-dark border border-primary/20 rounded-xl py-4 text-center text-3xl font-bold focus:ring-primary focus:border-primary" placeholder="0" type="number"/>
+</div>
+</div>
+<!-- Match Metadata -->
+<div class="bg-background-dark rounded-xl p-4 space-y-3 border border-primary/5">
+<div class="flex justify-between text-xs">
+<span class="text-slate-500">Stadium</span>
+<span class="font-medium text-slate-300">Azteca, Mexico City</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-slate-500">Group</span>
+<span class="font-medium text-slate-300">Group C</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-slate-500">Current Status</span>
+<span class="font-medium text-orange-400">Pending Score</span>
+</div>
+</div>
+<!-- Submit Button -->
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/20">
+<span class="material-icons">sync</span>
+                            Update &amp; Recalculate
+                        </button>
+<!-- Recent Updates Log -->
+<div class="pt-6 border-t border-primary/10">
+<h4 class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">Recent Activity</h4>
+<div class="space-y-4">
+<div class="flex gap-3">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+<span class="material-icons text-primary text-sm">check_circle</span>
+</div>
+<div>
+<p class="text-xs font-semibold">Match 41 Results Validated</p>
+<p class="text-[10px] text-slate-500 uppercase">2 hours ago</p>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+<span class="material-icons text-blue-500 text-sm">person_add</span>
+</div>
+<div>
+<p class="text-xs font-semibold">50+ New User Verifications</p>
+<p class="text-[10px] text-slate-500 uppercase">4 hours ago</p>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+<span class="material-icons text-orange-500 text-sm">warning</span>
+</div>
+<div>
+<p class="text-xs font-semibold">Manual Adjustment: UID #882</p>
+<p class="text-[10px] text-slate-500 uppercase">Yesterday</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Map Element (Hidden metadata requirements) -->
+<div class="hidden" data-location="Mexico City" style=""></div>
+</body></html>

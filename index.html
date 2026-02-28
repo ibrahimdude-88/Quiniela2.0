@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Quiniela Mundialista 2026</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#10b748",
+                        "accent-gold": "#f59e0b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#0f172a",
+                        "surface-dark": "#1e293b",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            scrollbar-width: thin;
+            scrollbar-color: #10b748 #1e293b;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Medal Animations */
+        @keyframes shine {
+            0% {
+                transform: translateX(-100%) rotate(45deg);
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: translateX(100%) rotate(45deg);
+                opacity: 0;
+            }
+        }
+
+        .medal-shine::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0) 100%);
+            transform: translateX(-100%) rotate(45deg);
+            animation: shine 2s infinite;
+        }
+
+        .medal-glow {
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                filter: drop-shadow(0 0 15px currentColor);
+                transform: scale(1);
+            }
+
+            50% {
+                filter: drop-shadow(0 0 30px currentColor);
+                transform: scale(1.1);
+            }
+        }
+    </style>
+    <!-- Confetti Logic -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Supabase Logic -->
+    <script type="module" src="./app.js"></script>
+    <script src="./app_bracket_ext.js" defer></script>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen font-display">
+    <header
+        class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-primary/10">
+        <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
+                    <span class="material-icons text-white">sports_soccer</span>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight">Copa 2026 <span class="text-primary">Quiniela</span></h1>
+            </div>
+            <div class="flex items-center gap-6">
+                <!-- User Points -->
+                <div
+                    class="hidden md:flex items-center bg-accent-gold/10 border border-accent-gold/20 px-4 py-1.5 rounded-full">
+                    <span class="material-icons text-accent-gold text-sm mr-2">stars</span>
+                    <span class="text-accent-gold font-bold" id="user-points">0 pts</span>
+                </div>
+                <!-- User Profile -->
+                <div class="flex items-center gap-3 pl-6 border-l border-white/10">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-semibold" id="user-name">Cargando...</p>
+                        <p class="text-xs text-slate-400" id="user-rank">Ranking: --</p>
+                    </div>
+                    <div class="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-white font-bold"
+                        id="user-avatar-placeholder">
+                        <span class="material-icons">person</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+        <!-- Hero Section -->
+        <div class="relative rounded-3xl overflow-hidden mb-10 p-8 md:p-12">
+            <!-- Background with Gradient & Mesh -->
+            <div class="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 z-0"></div>
+            <div
+                class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 z-0 mix-blend-overlay">
+            </div>
+            <div
+                class="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 z-0">
+            </div>
+            <div
+                class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-accent-gold/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 z-0">
+            </div>
+
+            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                <div>
+                    <span
+                        class="px-3 py-1 rounded-full bg-primary/20 text-primary border border-primary/20 text-xs font-bold uppercase tracking-wider mb-4 inline-block">Mundial
+                        2026</span>
+                    <h2 class="text-3xl md:text-5xl font-black text-white mb-2 tracking-tight">
+                        ¡Hola, <span id="hero-user-name"
+                            class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-emerald-300">Crack</span>!
+                    </h2>
+                    <p class="text-slate-400 text-lg max-w-lg mb-6">
+                        La jornada está por comenzar. Revisa tus pronósticos y asegura tu lugar en el ranking global.
+                    </p>
+                    <div class="flex items-center gap-4">
+                        <button onclick="document.getElementById('matches-list').scrollIntoView({behavior: 'smooth'})"
+                            class="px-6 py-3 rounded-xl bg-primary hover:bg-emerald-500 text-white font-bold shadow-lg shadow-primary/25 transition-all transform hover:-translate-y-1">
+                            Ver Partidos
+                        </button>
+                        <a href="#" id="btn-rules"
+                            class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold border border-white/5 transition-all">
+                            Reglas
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Mini Stats Card -->
+                <div
+                    class="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-2xl flex flex-wrap justify-center md:justify-start gap-6 md:gap-8 shadow-2xl">
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Tus Puntos</p>
+                        <p class="text-3xl font-black text-white" id="hero-points">0</p>
+                    </div>
+                    <div class="w-px bg-white/10 hidden md:block"></div>
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Ranking</p>
+                        <p class="text-3xl font-black text-accent-gold" id="hero-rank">-</p>
+                    </div>
+                    <div class="w-px bg-white/10 hidden md:block"></div>
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Aciertos</p>
+                        <p class="text-3xl font-black text-emerald-400" id="hero-aciertos">0</p>
+                    </div>
+                    <div class="w-px bg-white/10 hidden md:block"></div>
+                    <div class="text-center group relative">
+                        <p
+                            class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1 justify-center">
+                            Bote <span class="material-icons text-[10px] text-slate-500">info</span>
+                        </p>
+                        <p class="text-3xl font-black text-primary" id="hero-prize-total">$ --</p>
+
+                        <!-- Tooltip Breakdown -->
+                        <div
+                            class="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-48 bg-surface-dark border border-white/10 rounded-xl shadow-2xl p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto z-50">
+                            <div
+                                class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-surface-dark border-t border-l border-white/10 rotate-45">
+                            </div>
+                            <div id="hero-prize-details" class="space-y-2 text-xs text-slate-300">
+                                <div class="flex justify-between"><span id="prize-label-1">1er (--%)</span> <span
+                                        class="font-bold text-white" id="prize-1">-</span></div>
+                                <div class="flex justify-between"><span id="prize-label-2">2do (--%)</span> <span
+                                        class="font-bold text-white" id="prize-2">-</span></div>
+                                <div class="flex justify-between"><span id="prize-label-3">3er (--%)</span> <span
+                                        class="font-bold text-white" id="prize-3">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="grid grid-cols-5 gap-3 mb-8 overflow-x-auto">
+            <button onclick="closeAllModals()"
+                class="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-surface-dark border border-white/5 hover:bg-white/5 transition-all group min-w-[80px]">
+                <div
+                    class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <span class="material-icons text-primary">sports_soccer</span>
+                </div>
+                <span class="text-[10px] font-bold uppercase text-slate-400 group-hover:text-white">Partidos</span>
+            </button>
+            <button onclick="openModal('standings-modal')"
+                class="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-surface-dark border border-white/5 hover:bg-white/5 transition-all group min-w-[80px]">
+                <div
+                    class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                    <span class="material-icons text-blue-400">table_chart</span>
+                </div>
+                <span class="text-[10px] font-bold uppercase text-slate-400 group-hover:text-white">Tabla Gral.</span>
+            </button>
+            <button onclick="toggleBracket()"
+                class="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-surface-dark border border-white/5 hover:bg-white/5 transition-all group min-w-[80px]">
+                <div
+                    class="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors">
+                    <span class="material-icons text-indigo-400">account_tree</span>
+                </div>
+                <span class="text-[10px] font-bold uppercase text-slate-400 group-hover:text-white">Eliminatoria</span>
+            </button>
+            <button onclick="toggleAchievements()"
+                class="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-surface-dark border border-white/5 hover:bg-white/5 transition-all group min-w-[80px]">
+                <div
+                    class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+                    <span class="material-icons text-purple-400">military_tech</span>
+                </div>
+                <span class="text-[10px] font-bold uppercase text-slate-400 group-hover:text-white">Logros</span>
+            </button>
+            <button onclick="openModal('ranking-modal')"
+                class="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-surface-dark border border-white/5 hover:bg-white/5 transition-all group min-w-[80px]">
+                <div
+                    class="w-10 h-10 rounded-full bg-accent-gold/10 flex items-center justify-center group-hover:bg-accent-gold/20 transition-colors">
+                    <span class="material-icons text-accent-gold">emoji_events</span>
+                </div>
+                <span class="text-[10px] font-bold uppercase text-slate-400 group-hover:text-white">Ranking</span>
+            </button>
+        </nav>
+
+        <!-- Matchday Selector (Jornadas) -->
+        <section class="mb-8">
+            <div class="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 px-2" id="matchday-buttons">
+                <button
+                    class="px-6 py-2.5 rounded-full bg-primary text-white font-bold shadow-lg shadow-primary/25 transition-all transform hover:-translate-y-0.5 whitespace-nowrap shrink-0"
+                    data-matchday="1">
+                    Jornada 1
+                </button>
+                <button
+                    class="px-6 py-2.5 rounded-full bg-surface-dark border border-white/5 text-slate-400 font-bold hover:text-white hover:bg-white/5 transition-all whitespace-nowrap shrink-0"
+                    data-matchday="2">
+                    Jornada 2
+                </button>
+                <button
+                    class="px-6 py-2.5 rounded-full bg-surface-dark border border-white/5 text-slate-400 font-bold hover:text-white hover:bg-white/5 transition-all whitespace-nowrap shrink-0"
+                    data-matchday="3">
+                    Jornada 3
+                </button>
+                <div class="w-px h-8 bg-white/10 shrink-0 mx-1"></div>
+                <button
+                    class="px-6 py-2.5 rounded-full bg-surface-dark border border-white/5 text-slate-400 font-bold hover:text-white hover:bg-white/5 transition-all whitespace-nowrap shrink-0"
+                    data-matchday="4">
+                    16vos
+                </button>
+                <button
+                    class="px-6 py-2.5 rounded-full bg-surface-dark border border-white/5 text-slate-400 font-bold hover:text-white hover:bg-white/5 transition-all whitespace-nowrap shrink-0"
+                    data-matchday="5">
+                    8vos
+                </button>
+                <button
+                    class="px-6 py-2.5 rounded-full bg-surface-dark border border-white/5 text-slate-400 font-bold hover:text-white hover:bg-white/5 transition-all whitespace-nowrap shrink-0"
+                    data-matchday="6">
+                    4tos
+                </button>
+                <button
+                    class="px-6 py-2.5 rounded-full bg-surface-dark border border-white/5 text-slate-400 font-bold hover:text-white hover:bg-white/5 transition-all whitespace-nowrap shrink-0"
+                    data-matchday="7">
+                    Semi
+                </button>
+                <button
+                    class="px-6 py-2.5 rounded-full bg-surface-dark border border-white/5 text-slate-400 font-bold hover:text-white hover:bg-white/5 transition-all whitespace-nowrap shrink-0"
+                    data-matchday="8">
+                    Final
+                </button>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Matches List -->
+            <div class="lg:col-span-12">
+                <section id="matches-header" class="flex items-center justify-between mb-4 px-2">
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span class="material-icons text-primary">sports_soccer</span> Partidos
+                    </h3>
+                    <div class="bg-surface-dark border border-white/10 px-4 py-2 rounded-full flex items-center gap-3">
+                        <span class="text-xs text-slate-400 uppercase tracking-wider font-bold">Tu Progreso</span>
+                        <div class="flex items-center gap-1">
+                            <span id="progress-count" class="text-primary font-black text-lg">0</span>
+                            <span class="text-slate-600 text-sm font-bold">/</span>
+                            <span id="total-count" class="text-slate-400 text-sm font-bold">0</span>
+                        </div>
+                    </div>
+                </section>
+                <section id="matches-list" class="space-y-4">
+                    <div class="flex justify-center p-8">
+                        <span class="material-icons animate-spin text-primary text-4xl">refresh</span>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Sidebar Removed -->
+        </div>
+
+        <!-- Modals -->
+
+        <!-- Standings Modal -->
+        <div id="standings-modal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+            <div
+                class="bg-surface-dark w-full max-w-2xl mx-4 rounded-2xl border border-white/10 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+                <div class="p-5 border-b border-white/10 flex justify-between items-center bg-background-dark">
+                    <h3 class="text-lg font-bold flex items-center gap-2 text-white">
+                        <span class="material-icons text-blue-400">table_chart</span> Tabla General
+                    </h3>
+                    <button onclick="closeModal('standings-modal')"
+                        class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+                        <span class="material-icons text-sm">close</span>
+                    </button>
+                </div>
+                <div id="groups-standings-container"
+                    class="p-0 overflow-y-auto custom-scrollbar flex-1 divide-y divide-white/5">
+                    <div class="p-8 text-center text-slate-500">
+                        <span class="material-icons animate-spin mb-2">refresh</span>
+                        <p>Cargando tablas...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ranking Modal -->
+        <div id="ranking-modal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+            <div
+                class="bg-surface-dark w-full max-w-md mx-4 rounded-2xl border border-white/10 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+                <div class="p-5 border-b border-white/10 flex justify-between items-center bg-background-dark">
+                    <h3 class="text-lg font-bold flex items-center gap-2 text-white">
+                        <span class="material-icons text-accent-gold">emoji_events</span> Ranking Global
+                    </h3>
+                    <button onclick="closeModal('ranking-modal')"
+                        class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+                        <span class="material-icons text-sm">close</span>
+                    </button>
+                </div>
+                <div class="p-2 space-y-1 ranking-list overflow-y-auto custom-scrollbar flex-1">
+                    <p class="text-center text-slate-500 py-4 text-sm">Cargando ranking...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievements Modal -->
+        <div id="achievements-modal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+            <div
+                class="bg-surface-dark w-full max-w-2xl mx-4 rounded-2xl border border-white/10 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+                <div class="p-5 border-b border-white/10 flex justify-between items-center bg-background-dark">
+                    <h3 class="text-lg font-bold flex items-center gap-2 text-white">
+                        <span class="material-icons text-purple-400">military_tech</span> Mis Logros
+                    </h3>
+                    <button onclick="toggleAchievements()"
+                        class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+                        <span class="material-icons text-sm">close</span>
+                    </button>
+                </div>
+                <div id="achievements-modal-list"
+                    class="p-6 grid grid-cols-2 sm:grid-cols-3 gap-4 overflow-y-auto custom-scrollbar">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Bracket Modal (Full Screen) -->
+        <div id="bracket-modal"
+            style="display:none;position:fixed;inset:0;z-index:9999;background:#0f172a;flex-direction:column;">
+            <!-- Top Bar -->
+            <div
+                style="height:64px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span class="material-icons" style="color:#818cf8;font-size:22px;">emoji_events</span>
+                    <span style="color:white;font-weight:800;font-size:17px;letter-spacing:-0.02em;">Fase
+                        Eliminatoria</span>
+                    <span style="color:#475569;font-size:11px;font-weight:600;">Quiniela 2026</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button onclick="bracketZoomOut()"
+                        style="width:36px;height:36px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;"><span
+                            class="material-icons" style="font-size:18px;">remove</span></button>
+                    <span id="bracket-zoom-label"
+                        style="color:#94a3b8;font-size:12px;font-weight:700;min-width:44px;text-align:center;font-family:monospace;">80%</span>
+                    <button onclick="bracketZoomIn()"
+                        style="width:36px;height:36px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;"><span
+                            class="material-icons" style="font-size:18px;">add</span></button>
+                    <button onclick="bracketFit()"
+                        style="padding:0 16px;height:36px;background:#4f46e5;border:none;border-radius:8px;color:white;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;">FIT</button>
+                    <button onclick="toggleBracket()"
+                        style="width:36px;height:36px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:8px;"><span
+                            class="material-icons" style="font-size:18px;">close</span></button>
+                </div>
+            </div>
+            <!-- Pan/Zoom Stage -->
+            <div id="bracket-stage" style="flex:1;overflow:hidden;position:relative;cursor:grab;">
+                <div id="bracket-canvas"
+                    style="position:absolute;top:50%;left:50%;transform-origin:center;transform:translate(-50%,-50%) scale(0.8);">
+                    <div id="bracket-container" style="display:flex;align-items:center;gap:40px;padding:60px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scripts for Modals -->
+        <script>
+            function openModal(id) {
+                const modal = document.getElementById(id);
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    setTimeout(() => {
+                        modal.classList.remove('opacity-0');
+                        const inner = modal.querySelector('div');
+                        if (inner) {
+                            inner.classList.remove('scale-95');
+                            inner.classList.add('scale-100');
+                        }
+                    }, 10);
+                }
+            }
+            function closeModal(id) {
+                const modal = document.getElementById(id);
+                if (modal) {
+                    modal.classList.add('opacity-0');
+                    const inner = modal.querySelector('div');
+                    if (inner) {
+                        inner.classList.remove('scale-100');
+                        inner.classList.add('scale-95');
+                    }
+                    setTimeout(() => modal.classList.add('hidden'), 300);
+                }
+            }
+            function closeAllModals() {
+                closeModal('standings-modal');
+                closeModal('ranking-modal');
+                const achModal = document.getElementById('achievements-modal');
+                if (achModal && !achModal.classList.contains('hidden')) window.toggleAchievements();
+                const bracketModal = document.getElementById('bracket-modal');
+                if (bracketModal && !bracketModal.classList.contains('hidden')) window.toggleBracket();
+            }
+        </script>
+
+        <!-- Rules Modal (Hidden) -->
+        <div id="rules-modal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+            <div
+                class="bg-surface-dark w-full max-w-2xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300">
+                <div class="p-6 border-b border-white/10 flex justify-between items-center bg-background-dark">
+                    <h3 class="text-xl font-bold flex items-center gap-2">
+                        <span class="material-icons text-primary">rule</span> Reglas de Puntuación
+                    </h3>
+                    <button onclick="toggleRules()" class="text-slate-400 hover:text-white transition-colors">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="p-8 space-y-6 text-slate-300 overflow-y-auto max-h-[70vh]">
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0 border border-green-500/20">
+                            <span class="font-black text-xl text-green-500">+8</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white mb-1">Marcador Exacto</h4>
+                            <p class="text-sm text-slate-400">Si aciertas el resultado exacto del partido.</p>
+                            <p class="text-xs text-slate-500 mt-1 bg-white/5 p-2 rounded">Ejemplo: Pronosticas 2-1 y el
+                                partido termina 2-1.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
+                            <span class="font-black text-xl text-blue-500">+3</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white mb-1">Ganador o Empate</h4>
+                            <p class="text-sm text-slate-400">Si aciertas quién gana o si es empate, pero no el marcador
+                                exacto.</p>
+                            <p class="text-xs text-slate-500 mt-1 bg-white/5 p-2 rounded">Ejemplo: Pronosticas 2-0 y
+                                termina 1-0 (Gana el mismo).</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0 border border-red-500/20">
+                            <span class="font-black text-xl text-red-500">0</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white mb-1">Sin Acierto</h4>
+                            <p class="text-sm text-slate-400">Si no aciertas ni el ganador ni el marcador.</p>
+                        </div>
+                    </div>
+
+                    <!-- Additional Rules -->
+                    <div class="pt-6 border-t border-white/10 space-y-4">
+                        <h4 class="font-bold text-lg text-primary uppercase tracking-wide flex items-center gap-2">
+                            <span class="material-icons text-sm">info</span> Información General
+                        </h4>
+
+                        <div class="bg-background-dark/50 p-4 rounded-xl border border-white/5 space-y-3">
+                            <div>
+                                <h5 class="font-bold text-sm text-slate-200">🕒 Cierre de Pronósticos</h5>
+                                <p class="text-xs text-slate-400 mt-1">Los pronósticos se pueden modificar hasta 5
+                                    minutos antes del inicio de cada partido. Una vez cerrado, no hay cambios.</p>
+                            </div>
+                            <div>
+                                <h5 class="font-bold text-sm text-slate-200">🏆 Desempates</h5>
+                                <p class="text-xs text-slate-400 mt-1">En caso de empate en puntos, se decide por:</p>
+                                <ol class="list-decimal list-inside text-xs text-slate-500 mt-1 ml-1 space-y-1">
+                                    <li>Mayor cantidad de <strong>Marcadores Exactos</strong> (+8).</li>
+                                    <li>Mayor cantidad de puntos en la última jornada.</li>
+                                    <li>Moneda al aire (Decisión Admin).</li>
+                                </ol>
+                            </div>
+                            <div>
+                                <h5 class="font-bold text-sm text-slate-200">💰 Premios</h5>
+                                <p class="text-xs text-slate-400 mt-1">El Bote Acumulado se reparte entre los 3 primeros
+                                    lugares según el porcentaje configurado (Ver Tabla de Premios). El monto depende del
+                                    total de participantes pagados.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 bg-background-dark border-t border-white/10 text-center">
+                    <button onclick="toggleRules()"
+                        class="px-8 py-2 rounded-lg bg-primary hover:bg-green-600 text-white font-bold transition-colors">ENTENDIDO</button>
+                </div>
+            </div>
+        </div>
+
+        </div>
+
+        <!-- Achievements Modal -->
+        <div id="achievements-modal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+            <div
+                class="bg-surface-dark w-full max-w-2xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300">
+                <div class="p-6 border-b border-white/10 flex justify-between items-center bg-background-dark">
+                    <h3 class="text-xl font-bold flex items-center gap-2">
+                        <span class="material-icons text-purple-400">military_tech</span> Mis Logros
+                    </h3>
+                    <button onclick="toggleAchievements()" class="text-slate-400 hover:text-white transition-colors">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto max-h-[70vh]"
+                    id="achievements-modal-list">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- User Details Modal (Ranking) -->
+        <div id="user-details-modal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+            <div
+                class="bg-surface-dark w-full max-w-md rounded-2xl border border-white/10 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300">
+                <div class="p-6 border-b border-white/10 flex justify-between items-center bg-background-dark">
+                    <h3 class="text-xl font-bold flex items-center gap-2" id="modal-user-name">
+                        <span class="material-icons text-accent-gold">emoji_events</span> Detalles
+                    </h3>
+                    <button onclick="toggleUserDetails()" class="text-slate-400 hover:text-white transition-colors">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Marcadores Exactos
+                        </h4>
+                        <div id="modal-exact-matches" class="space-y-2">
+                            <!-- List of exact matches -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ranking Celebration Modal -->
+        <div id="ranking-celebration-modal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md hidden opacity-0 transition-opacity duration-500">
+            <div
+                class="bg-surface-dark w-full max-w-sm mx-4 rounded-3xl border border-white/10 shadow-2xl overflow-hidden transform scale-50 transition-transform duration-500 flex flex-col items-center p-8 relative isolate">
+                <button onclick="closeModal('ranking-celebration-modal')"
+                    class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors z-20">
+                    <span class="material-icons text-sm">close</span>
+                </button>
+
+                <div id="celebration-rays"
+                    class="absolute inset-0 z-0 bg-gradient-radial from-transparent to-surface-dark opacity-50 pointer-events-none">
+                </div>
+
+                <h3 class="text-xl font-bold text-slate-300 mb-6 z-10 uppercase tracking-widest" id="celebration-title">
+                    Tu Ranking</h3>
+
+                <div class="relative w-32 h-32 mb-6 flex items-center justify-center z-10"
+                    id="celebration-medal-container">
+                    <span id="celebration-medal-icon"
+                        class="material-icons text-[100px] medal-glow relative overflow-hidden medal-shine">emoji_events</span>
+                </div>
+
+                <div class="text-center z-10">
+                    <p class="text-sm font-bold text-slate-400 mb-1" id="celebration-subtitle">Posición actual</p>
+                    <p class="text-4xl font-black text-white mb-4" id="celebration-rank-text">#1</p>
+                    <p class="text-sm text-slate-300 max-w-xs mx-auto" id="celebration-message">¡Sigue así!</p>
+                </div>
+
+                <button onclick="closeModal('ranking-celebration-modal')"
+                    class="mt-8 px-8 py-3 rounded-xl bg-primary hover:bg-emerald-500 text-white font-bold shadow-lg shadow-primary/25 transition-all w-full z-10">
+                    Continuar
+                </button>
+            </div>
+        </div>
+
+        <!-- Bracket Modal (original above) -->
+        <div id="bracket-modal-unused" class="hidden"
+            style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; background-color: rgb(15, 23, 42); font-family: ui-sans-serif, system-ui, sans-serif;">
+
+            <!-- Toolbar -->
+            <div
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 80px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; z-index: 10010; background-color: rgba(255, 255, 255, 0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div
+                        style="width: 40px; height: 40px; background-color: #4f46e5; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(79, 70, 229, 0.5); border: 1px solid rgba(129, 140, 248, 0.3);">
+                        <span class="material-icons" style="color: white; font-size: 24px;">emoji_events</span>
+                    </div>
+                    <div>
+                        <h2 style="font-size: 20px; font-weight: 900; color: white; margin: 0; line-height: 1.2;">Fase
+                            Eliminatoria</h2>
+                        <p
+                            style="color: #a5b4fc; font-size: 12px; font-weight: 700; text-transform: uppercase; margin: 0; letter-spacing: 0.05em;">
+                            Quiniela 2026</p>
+                    </div>
+                </div>
+                <!-- Close Button -->
+                <button onclick="toggleBracket()"
+                    style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                    <span class="material-icons" style="font-size: 24px;">close</span>
+                </button>
+            </div>
+
+            <!-- Scroll/Zoom Container (Full Screen) -->
+            <div id="bracket-scroll-area"
+                style="position: absolute; top: 80px; left: 0; right: 0; bottom: 0; overflow: hidden; cursor: grab; user-select: none; background: radial-gradient(circle at center, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 1) 100%);">
+
+                <!-- Transform Target -->
+                <div id="bracket-content"
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); transform-origin: center; width: auto; height: auto; transition: transform 0.1s ease-out;">
+
+                    <!-- Content injected via JS -->
+                    <div id="bracket-tree-target"
+                        style="display: flex; align-items: center; justify-content: center; padding: 100px; gap: 60px; min-width: 800px; min-height: 600px;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls (Fixed Bottom) -->
+            <div
+                style="position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); z-index: 10010; display: flex; align-items: center; gap: 8px; background-color: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px 12px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);">
+                <button onclick="zoomBracket(-0.1)"
+                    style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: white; cursor: pointer;">
+                    <span class="material-icons" style="font-size: 24px;">remove</span>
+                </button>
+                <div
+                    style="display: flex; flex-direction: column; align-items: center; padding: 0 12px; border-left: 1px solid rgba(255, 255, 255, 0.1); border-right: 1px solid rgba(255, 255, 255, 0.1); margin: 0 4px;">
+                    <span
+                        style="font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: 900; letter-spacing: 0.1em; margin-bottom: 4px;">ZOOM</span>
+                    <span id="zoom-level"
+                        style="font-size: 14px; font-weight: 700; color: white; font-family: monospace; min-width: 40px; text-align: center;">100%</span>
+                </div>
+                <button onclick="zoomBracket(0.1)"
+                    style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: white; cursor: pointer;">
+                    <span class="material-icons" style="font-size: 24px;">add</span>
+                </button>
+                <button onclick="resetBracketZoom()"
+                    style="margin-left: 8px; padding: 8px 20px; background-color: #4f46e5; border-radius: 8px; border: none; font-size: 12px; font-weight: 700; color: white; cursor: pointer; letter-spacing: 0.05em; box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);">
+                    FIT
+                </button>
+            </div>
+        </div>
+
+    </main>
+</body>
+
+</html>

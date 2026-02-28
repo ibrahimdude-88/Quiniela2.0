@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Herramienta Diagnóstico - Reset Admin</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #111;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        button {
+            font-size: 24px;
+            padding: 15px 30px;
+            background: #e11d48;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #be123c;
+        }
+
+        #log {
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Reparar Puntos Admin</h1>
+    <button onclick="runFix()" id="btn">RESET A CERO</button>
+    <div id="log">Esperando acción...</div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        // CREDENTIALS FROM ADMIN.JS
+        const SUPABASE_URL = 'https://ocrtkgcitqxgbwgtzhwd.supabase.co';
+        const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jcnRrZ2NpdHF4Z2J3Z3R6aHdkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDc1MDkyOSwiZXhwIjoyMDg2MzI2OTI5fQ.0u2WEt6X7KT3m-XlF0HxwjnHS1nAi0gmVZlT_IoFDa4';
+
+        // Initialize Admin Client
+        const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
+            auth: { autoRefreshToken: false, persistSession: false }
+        });
+
+        window.runFix = async () => {
+            const btn = document.getElementById('btn');
+            const logDiv = document.getElementById('log');
+            const log = (msg) => { console.log(msg); logDiv.innerText += '\n' + msg; };
+
+            btn.disabled = true;
+            btn.innerText = 'Procesando...';
+            logDiv.innerText = 'Iniciando diagnóstico...';
+
+            try {
+                // 1. Identify Admin User
+                log('1. Buscando usuario admin (zippo0189@gmail.com)...');
+                const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+
+                if (usersError) throw usersError;
+
+                const adminUser = usersData.users.find(u => u.email === 'zippo0189@gmail.com');
+
+                if (!adminUser) {
+                    throw new Error('No se encontro el usuario zippo0189@gmail.com');
+                }
+                log(`Admin encontrado: ID ${adminUser.id}`);
+
+                // 2. Check current status
+                log('2. Verificando perfil actual...');
+                const { data: profile, error: profError } = await supabaseAdmin
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', adminUser.id)
+                    .single();
+
+                if (profError) throw profError;
+                log(`Estado actual: Puntos=${profile.points}, Exactos=${profile.exact_matches}`);
+
+                // 3. Force Update (POINTS ONLY)
+                log('3. Forzando UPDATE a 0 (Solo puntos)...');
+                const { error: upError } = await supabaseAdmin
+                    .from('profiles')
+                    .update({ points: 0 }) // Removing exact_matches to avoid error
+                    .eq('id', adminUser.id);
+
+                if (upError) throw upError;
+                log('Update ejecutado.');
+
+                // 4. Verify
+                log('4. Verificando cambio...');
+                const { data: profileAfter } = await supabaseAdmin
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', adminUser.id)
+                    .single();
+
+                log(`Estado NUEVO: Puntos=${profileAfter.points}, Exactos=${profileAfter.exact_matches}`);
+
+                if (profileAfter.points === 0) {
+                    log('✅ ÉXITO TOTAL. El perfil ha sido reseteado.');
+                    alert('¡ÉXITO! Puntos reseteados a 0. Vuelve al panel de administración.');
+                } else {
+                    log('❌ FALLO. Los puntos siguen siendo ' + profileAfter.points);
+                    alert('Fallo desconocido. Revisa el log.');
+                }
+
+            } catch (err) {
+                log('❌ ERROR FATAL: ' + err.message);
+                alert('Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Intentar de nuevo';
+            }
+        };
+    </script>
+</body>
+
+</html>

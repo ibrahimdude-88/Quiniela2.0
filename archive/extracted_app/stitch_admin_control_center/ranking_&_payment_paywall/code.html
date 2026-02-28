@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#10b748",
+              "background-light": "#f6f8f6",
+              "background-dark": "#0a120b",
+              "accent-gold": "#fbbf24",
+            },
+            fontFamily: {
+              "display": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .blurred-content {
+            filter: blur(8px);
+            pointer-events: none;
+            user-select: none;
+        }
+        .premium-glow {
+            box-shadow: 0 0 40px -10px rgba(16, 183, 72, 0.3);
+        }
+        .gold-shimmer {
+            background: linear-gradient(45deg, #fbbf24 0%, #fef3c7 50%, #fbbf24 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+<title>Ranking &amp; Paywall | World Cup 2026</title>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen overflow-hidden">
+<!-- Header Navigation (Blurred) -->
+<nav class="blurred-content flex items-center justify-between px-8 py-6 border-b border-primary/10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+<span class="material-icons text-white">sports_soccer</span>
+</div>
+<span class="text-xl font-bold tracking-tight">QUINIELA 2026</span>
+</div>
+<div class="flex items-center gap-6">
+<span class="font-medium opacity-60">Predicciones</span>
+<span class="font-medium text-primary">Ranking</span>
+<span class="font-medium opacity-60">Reglas</span>
+<div class="w-10 h-10 rounded-full bg-primary/20 border border-primary/30"></div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="relative min-h-[calc(100-80px)] p-8">
+<!-- Background Leaderboard (Locked/Blurred) -->
+<div class="max-w-5xl mx-auto blurred-content">
+<header class="mb-8">
+<h1 class="text-4xl font-extrabold mb-2">Ranking Global</h1>
+<p class="text-slate-500">Mundial FIFA 2026 • 48 Selecciones</p>
+</header>
+<div class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+<table class="w-full text-left">
+<thead class="bg-white/5 border-b border-white/10">
+<tr>
+<th class="px-6 py-4 font-semibold">Posición</th>
+<th class="px-6 py-4 font-semibold">Usuario</th>
+<th class="px-6 py-4 font-semibold">Aciertos</th>
+<th class="px-6 py-4 font-semibold">Puntos</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<!-- Sample Rows -->
+<tr class="bg-primary/5">
+<td class="px-6 py-4"><span class="flex items-center justify-center w-8 h-8 rounded-full bg-accent-gold/20 text-accent-gold font-bold">1</span></td>
+<td class="px-6 py-4 flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-slate-700"></div>
+<span class="font-medium">Campeon2026</span>
+</td>
+<td class="px-6 py-4">42</td>
+<td class="px-6 py-4 font-bold text-primary">1,240</td>
+</tr>
+<!-- Repeat rows -->
+<script>
+                            for(let i=2; i<=10; i++) {
+                                document.write(`
+                                    <tr>
+                                        <td class="px-6 py-4"><span class="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 text-slate-400 font-bold">${i}</span></td>
+                                        <td class="px-6 py-4 flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-slate-800"></div>
+                                            <span class="font-medium">Usuario_Anonimo_${i}</span>
+                                        </td>
+                                        <td class="px-6 py-4">3${i}</td>
+                                        <td class="px-6 py-4 font-bold">9${i}0</td>
+                                    </tr>
+                                `);
+                            }
+                        </script>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Paywall Overlay -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-background-dark/60 backdrop-blur-sm p-4">
+<!-- Modal Card -->
+<div class="w-full max-w-md bg-white dark:bg-[#152a1b] rounded-xl premium-glow border border-primary/20 p-8 text-center relative overflow-hidden">
+<!-- Background Decorative Element -->
+<div class="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
+<!-- Trophy / Illustration -->
+<div class="mb-6 inline-flex relative">
+<div class="absolute inset-0 bg-accent-gold/20 rounded-full blur-xl scale-150"></div>
+<div class="relative w-24 h-24 bg-gradient-to-b from-accent-gold/20 to-accent-gold/40 rounded-full flex items-center justify-center border-2 border-accent-gold/30">
+<span class="material-icons text-5xl text-accent-gold">emoji_events</span>
+</div>
+</div>
+<!-- Content -->
+<h2 class="text-3xl font-extrabold mb-3 dark:text-white">¡Desbloquea la emoción!</h2>
+<p class="text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
+                    Confirma tu pago para ver tu posición en la tabla, comparar tus resultados y participar por los premios finales del mundial.
+                </p>
+<!-- Pricing & CTA -->
+<div class="space-y-4">
+<div class="bg-primary/5 border border-primary/20 rounded-full py-3 px-6 inline-flex items-center gap-2 mb-4">
+<span class="material-icons text-primary text-sm">verified</span>
+<span class="text-primary font-bold">Acceso Premium: $5.00 USD</span>
+</div>
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-full transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 group">
+                        Confirmar Pago
+                        <span class="material-icons group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<button class="w-full bg-transparent border border-slate-300 dark:border-white/10 hover:bg-white/5 text-slate-500 dark:text-slate-400 font-semibold py-4 rounded-full transition-all">
+                        Subir Comprobante
+                    </button>
+</div>
+<!-- Trust Footer -->
+<div class="mt-8 pt-6 border-t border-slate-200 dark:border-white/5 flex items-center justify-center gap-4">
+<div class="flex items-center gap-1 opacity-50 grayscale hover:grayscale-0 transition-all cursor-default">
+<span class="material-icons text-sm">lock</span>
+<span class="text-xs font-medium uppercase tracking-widest">Pago Seguro</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Background Decoration -->
+<div class="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none overflow-hidden opacity-20">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent-gold/10 rounded-full blur-[120px]"></div>
+</div>
+</body></html>

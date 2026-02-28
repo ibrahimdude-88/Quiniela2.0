@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Acceso - Quiniela Mundialista</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script type="module">
+        import { signIn, signUp } from './auth.js';
+
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const errorMsg = document.getElementById('error-msg');
+        const successMsg = document.getElementById('success-msg');
+        const toggleLinks = document.querySelectorAll('.toggle-auth');
+
+        // Toggle between Login and Register
+        toggleLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('login-container').classList.toggle('hidden');
+                document.getElementById('register-container').classList.toggle('hidden');
+                errorMsg.classList.add('hidden');
+                successMsg.classList.add('hidden');
+            });
+        });
+
+        // Handle Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMsg.classList.add('hidden');
+            successMsg.classList.add('hidden');
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const { user, error } = await signIn(email, password);
+                if (error) throw error;
+                window.location.href = '/index.html';
+            } catch (err) {
+                console.error(err);
+                errorMsg.textContent = 'Error: ' + (err.message || 'Credenciales inválidas');
+                errorMsg.classList.remove('hidden');
+            }
+        });
+
+        // Handle Registration
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMsg.classList.add('hidden');
+            successMsg.classList.add('hidden');
+
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const fullName = document.getElementById('reg-name').value;
+            const username = document.getElementById('reg-username').value;
+            const whatsapp = document.getElementById('reg-whatsapp').value;
+
+            try {
+                const { user, error } = await signUp(email, password, fullName, whatsapp, username);
+                if (error) throw error;
+
+                successMsg.textContent = '¡Registro exitoso! Por favor verifica tu email o inicia sesión.';
+                successMsg.classList.remove('hidden');
+
+                // Switch to login view after short delay or just let them see the message
+                setTimeout(() => {
+                    document.getElementById('login-container').classList.remove('hidden');
+                    document.getElementById('register-container').classList.add('hidden');
+                }, 2000);
+
+            } catch (err) {
+                console.error(err);
+                errorMsg.textContent = 'Error al registrar: ' + (err.message || 'Inténtalo de nuevo');
+                errorMsg.classList.remove('hidden');
+            }
+        });
+    </script>
+</head>
+
+<body
+    class="bg-slate-900 text-white flex items-center justify-center min-h-screen bg-[url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')] bg-cover bg-center bg-no-repeat bg-blend-overlay bg-black/60">
+
+    <div class="w-full max-w-md p-8 bg-slate-800/90 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700">
+        <!-- Logo / Header -->
+        <div class="text-center mb-8">
+            <span class="material-icons text-5xl text-green-500 mb-2">sports_soccer</span>
+            <h1 class="text-3xl font-bold tracking-tight">Quiniela 2026</h1>
+            <p class="text-slate-400 text-sm mt-1">Participa y gana en el mundial</p>
+        </div>
+
+        <!-- Global Messages -->
+        <div id="error-msg" class="mb-4 p-3 bg-red-500/20 border border-red-500/50 text-red-200 text-sm rounded hidden">
+        </div>
+        <div id="success-msg"
+            class="mb-4 p-3 bg-green-500/20 border border-green-500/50 text-green-200 text-sm rounded hidden"></div>
+
+        <!-- Login Form -->
+        <div id="login-container">
+            <h2 class="text-xl font-bold mb-4 text-green-400">Iniciar Sesión</h2>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1 uppercase">Email</label>
+                    <input type="email" id="email"
+                        class="w-full rounded bg-slate-900 border-slate-600 focus:ring-green-500 focus:border-green-500 text-white placeholder-slate-500"
+                        placeholder="tu@email.com" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1 uppercase">Contraseña</label>
+                    <input type="password" id="password"
+                        class="w-full rounded bg-slate-900 border-slate-600 focus:ring-green-500 focus:border-green-500 text-white placeholder-slate-500"
+                        placeholder="••••••••" required>
+                </div>
+                <button type="submit"
+                    class="w-full py-3 bg-green-600 hover:bg-green-500 rounded-lg font-bold text-white transition-all shadow-lg shadow-green-600/20">
+                    ENTRAR
+                </button>
+            </form>
+            <p class="mt-6 text-center text-sm text-slate-400">
+                ¿Aún no tienes cuenta? <a href="#"
+                    class="text-green-400 hover:text-green-300 font-semibold toggle-auth">Regístrate gratis</a>
+            </p>
+        </div>
+
+        <!-- Register Form (Hidden by default) -->
+        <div id="register-container" class="hidden">
+            <h2 class="text-xl font-bold mb-4 text-green-400">Crear Cuenta</h2>
+            <form id="register-form" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1 uppercase">Nombre Completo</label>
+                        <input type="text" id="reg-name"
+                            class="w-full rounded bg-slate-900 border-slate-600 focus:ring-green-500 focus:border-green-500 text-white"
+                            required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1 uppercase">Usuario (Alias)</label>
+                        <input type="text" id="reg-username"
+                            class="w-full rounded bg-slate-900 border-slate-600 focus:ring-green-500 focus:border-green-500 text-white"
+                            required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1 uppercase">Email</label>
+                    <input type="email" id="reg-email"
+                        class="w-full rounded bg-slate-900 border-slate-600 focus:ring-green-500 focus:border-green-500 text-white"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1 uppercase">WhatsApp (Opcional)</label>
+                    <input type="tel" id="reg-whatsapp"
+                        class="w-full rounded bg-slate-900 border-slate-600 focus:ring-green-500 focus:border-green-500 text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1 uppercase">Contraseña</label>
+                    <input type="password" id="reg-password"
+                        class="w-full rounded bg-slate-900 border-slate-600 focus:ring-green-500 focus:border-green-500 text-white"
+                        minlength="6" required>
+                </div>
+                <button type="submit"
+                    class="w-full py-3 bg-green-600 hover:bg-green-500 rounded-lg font-bold text-white transition-all shadow-lg shadow-green-600/20">
+                    REGISTRARSE
+                </button>
+            </form>
+            <p class="mt-6 text-center text-sm text-slate-400">
+                ¿Ya tienes cuenta? <a href="#"
+                    class="text-green-400 hover:text-green-300 font-semibold toggle-auth">Inicia Sesión</a>
+            </p>
+        </div>
+
+    </div>
+</body>
+
+</html>

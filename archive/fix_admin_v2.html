@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Fixed Admin Tools V2</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #000;
+            color: #0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        button {
+            font-size: 24px;
+            padding: 20px 40px;
+            background: #00f;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+
+        #log {
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            width: 80%;
+            background: #111;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>VERSION 2 - SOLO PUNTOS</h1>
+    <button onclick="runFix()" id="btn">RESET PUNTOS AHORA</button>
+    <div id="log">Listo.</div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        // CREDENTIALS
+        const SUPABASE_URL = 'https://ocrtkgcitqxgbwgtzhwd.supabase.co';
+        const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jcnRrZ2NpdHF4Z2J3Z3R6aHdkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDc1MDkyOSwiZXhwIjoyMDg2MzI2OTI5fQ.0u2WEt6X7KT3m-XlF0HxwjnHS1nAi0gmVZlT_IoFDa4';
+
+        const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
+            auth: { autoRefreshToken: false, persistSession: false }
+        });
+
+        window.runFix = async () => {
+            const btn = document.getElementById('btn');
+            const logDiv = document.getElementById('log');
+            const log = (msg) => { console.log(msg); logDiv.innerText += '\n' + msg; };
+
+            btn.disabled = true;
+            btn.innerText = 'Ejecutando...';
+
+            try {
+                log('Iniciando...');
+
+                // 1. Get Users
+                const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+                const adminUser = usersData.users.find(u => u.email === 'zippo0189@gmail.com');
+
+                if (!adminUser) throw new Error('Usuario admin no encontrado.');
+                log(`Admin ID: ${adminUser.id}`);
+
+                // 2. Update - ONLY POINTS
+                log('Intentando UPDATE solo de puntos...');
+
+                // We use base UPDATE without exact_matches
+                const { error: upError } = await supabaseAdmin
+                    .from('profiles')
+                    .update({ points: 0 })
+                    .eq('id', adminUser.id);
+
+                if (upError) throw upError;
+
+                log('Update enviado. Verificando...');
+
+                // 3. Check
+                const { data: profile } = await supabaseAdmin
+                    .from('profiles')
+                    .select('points')
+                    .eq('id', adminUser.id)
+                    .single();
+
+                if (profile.points === 0) {
+                    log('✅ EXITO: Puntos son 0.');
+                    alert('✅ Puntos reseteados correctamente a 0.');
+                } else {
+                    log('❌ FALLO: Puntos siguen siendo ' + profile.points);
+                }
+
+            } catch (e) {
+                log('❌ ERROR: ' + e.message);
+                alert('Error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Reintentar';
+            }
+        };
+    </script>
+</body>
+
+</html>
