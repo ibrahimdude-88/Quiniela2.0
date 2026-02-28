@@ -1035,8 +1035,8 @@ async function updateAllProfilesPoints() {
         let exactMatchesMissing = false;
         for (const uid of userIds) {
             const updates = { points: userPoints[uid] };
-            // Only include exact_matches if we haven't detected it's missing
-            if (!exactMatchesMissing) updates.exact_matches = userExacts[uid];
+            // Only include exact_score_count if we haven't detected it's missing
+            if (!exactMatchesMissing) updates.exact_score_count = userExacts[uid];
 
             const { error } = await supabaseAdmin
                 .from('profiles')
@@ -1049,7 +1049,7 @@ async function updateAllProfilesPoints() {
                     console.warn(`Error updating profile ${uid} (likely missing column), retrying points only...`, error);
                     exactMatchesMissing = true; // Flag to skip column for rest
 
-                    // Retry immediately without exact_matches
+                    // Retry immediately without exact_score_count
                     const { error: retryError } = await supabaseAdmin
                         .from('profiles')
                         .update({ points: userPoints[uid] }) // Points only
@@ -1117,8 +1117,8 @@ window.resetApp = async () => {
 
         const { error: profileError, count: profileCount } = await supabaseAdmin
             .from('profiles')
-            .update({ points: 0, exact_matches: 0 })
-            .gt('points', -1)
+            .update({ points: 0, exact_score_count: 0 })
+            .neq('id', '00000000-0000-0000-0000-000000000000') // Trick to update all records
             .select('*', { count: 'exact' });
 
         const { data: userAfter } = await supabaseAdmin.from('profiles').select('points').eq('id', user.id).single();
@@ -2100,10 +2100,10 @@ window.resetApp = async () => {
         // 4. Reset Admin - Standard (points + exacts)
         const { error: uErr } = await supabaseAdmin
             .from('profiles')
-            .update({ points: 0, exact_matches: 0 })
+            .update({ points: 0, exact_score_count: 0 })
             .eq('id', user.id);
 
-        // Fallback if exact_matches missing
+        // Fallback if exact_score_count missing
         if (uErr) {
             console.warn('Standard reset failed, trying fallback:', uErr);
             const { error: uErr2 } = await supabaseAdmin
@@ -2112,7 +2112,7 @@ window.resetApp = async () => {
                 .eq('id', user.id);
 
             if (uErr2) throw uErr2; // Both failed
-            alert('Aviso: Puntos reseteados, pero falta columna "exact_matches".');
+            alert('Aviso: Puntos reseteados, pero falta columna "exact_score_count".');
         }
 
         if (uErr) {

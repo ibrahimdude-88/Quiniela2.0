@@ -147,6 +147,18 @@
                 content.classList.add('hidden-section');
             }
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = ['sec-settings', 'sec-testing', 'sec-preview', 'sec-playoff', 'sec-qualified', 'sec-bracket', 'sec-matches', 'sec-users'];
+            sections.forEach(id => {
+                const section = document.getElementById(id);
+                const content = document.getElementById('content-' + id);
+                if (section && content) {
+                    section.classList.add('is-collapsed');
+                    content.classList.add('hidden-section');
+                }
+            });
+        });
     </script>
 </head>
 
