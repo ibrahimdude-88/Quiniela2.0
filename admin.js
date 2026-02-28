@@ -116,7 +116,17 @@ async function loadUsers() {
         return;
     }
 
-    users = data;
+    const { data: predsData, error: predsError } = await supabaseAdmin
+        .from('predictions')
+        .select('user_id, match_id, home_score, away_score');
+
+    const allPreds = predsData || [];
+
+    users = data.map(u => {
+        const uPreds = allPreds.filter(p => p.user_id === u.id && p.home_score !== null && p.away_score !== null);
+        return { ...u, predictions: uPreds };
+    });
+
     console.log(`[LOAD USERS] Loaded ${users.length} users`);
     console.log('[LOAD USERS] Test users:', users.filter(u => u.is_test).length);
 
@@ -135,6 +145,7 @@ async function loadMatches() {
     }
     matches = data;
     renderMatches();
+    if (users.length > 0) renderUsers(); // Re-render to show matchday progress correctly once matches arrive
 }
 
 function renderMatches() {
@@ -676,6 +687,9 @@ function renderUsers() {
             <td class="px-4 py-3 text-center">
                 <span class="font-bold text-emerald-400">${user.exact_score_count || 0}</span>
             </td>
+            <td class="px-4 py-3">
+                ${renderUserPredictionProgress(user)}
+            </td>
             <td class="px-4 py-3 text-right">
                  <button onclick="toggleAdmin('${user.id}', ${user.role !== 'admin'})" class="p-1.5 rounded-lg hover:bg-white/10 transition-colors ${user.role === 'admin' ? 'text-accent-gold' : 'text-slate-600'}">
                     <span class="material-icons text-sm">shield</span>
@@ -687,6 +701,48 @@ function renderUsers() {
             </td>
         </tr>
             `).join('');
+}
+
+function renderUserPredictionProgress(user) {
+    if (!matches || matches.length === 0) return '<span class="text-[10px] text-slate-500">Cargando...</span>';
+
+    const userPreds = user.predictions || [];
+    const predsByMatchId = new Set(userPreds.map(p => p.match_id));
+
+    const mLabels = {
+        1: 'J1', 2: 'J2', 3: 'J3',
+        4: '16V', 5: '8V', 6: '4T', 7: 'SM', 8: 'FN'
+    };
+
+    let html = '<div class="flex flex-wrap gap-1 justify-center">';
+
+    for (let matchday = 1; matchday <= 8; matchday++) {
+        const matchesInMd = matches.filter(m => m.matchday === matchday && m.home_team !== 'TBD' && m.away_team !== 'TBD');
+
+        if (matchesInMd.length === 0) continue;
+
+        let completed = 0;
+        matchesInMd.forEach(m => {
+            if (predsByMatchId.has(m.id)) completed++;
+        });
+
+        const total = matchesInMd.length;
+        const isComplete = completed === total;
+        const isPartial = completed > 0 && completed < total;
+
+        // bg-green complete, yellow partial, slate none
+        let bgClass = 'bg-slate-700/50 text-slate-500 border-slate-600/50';
+        if (isComplete) bgClass = 'bg-green-500/20 text-green-400 border-green-500/30';
+        else if (isPartial) bgClass = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+
+        html += `<div title="${mLabels[matchday]}: ${completed}/${total} capturados" 
+                      class="px-1.5 py-0.5 rounded text-[9px] font-bold border cursor-help ${bgClass}">
+                    ${mLabels[matchday]}
+                 </div>`;
+    }
+
+    html += '</div>';
+    return html;
 }
 
 // --- Actions ---
