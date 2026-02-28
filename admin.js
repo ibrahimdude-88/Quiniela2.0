@@ -1173,7 +1173,8 @@ window.resetApp = async () => {
         // 6. Reset Qualified Third Places
         const { error: thirdPlacesError } = await supabaseAdmin
             .from('app_settings')
-            .upsert({ key: 'qualified_third_places', value: [] });
+            .update({ value: [] })
+            .eq('key', 'qualified_third_places');
 
         if (thirdPlacesError) {
             console.error('Error wiping qualified third places:', thirdPlacesError);
@@ -1660,7 +1661,9 @@ window.moveSelectedToQualified = async () => {
 
     // Save
     try {
-        await supabase.from('app_settings').upsert({ key: 'qualified_third_places', value: qualifiedThirdPlaces });
+        await supabase.from('app_settings')
+            .update({ value: qualifiedThirdPlaces })
+            .eq('key', 'qualified_third_places');
     } catch (e) { console.error(e); }
 }
 
@@ -1675,7 +1678,9 @@ window.removeSelectedFromQualified = async () => {
 
     // Save
     try {
-        await supabase.from('app_settings').upsert({ key: 'qualified_third_places', value: qualifiedThirdPlaces });
+        await supabase.from('app_settings')
+            .update({ value: qualifiedThirdPlaces })
+            .eq('key', 'qualified_third_places');
     } catch (e) { console.error(e); }
 }
 
@@ -2154,7 +2159,8 @@ window.resetApp = async () => {
         // 7. Reset Qualified Third Places
         const { error: thirdPlacesError } = await supabaseAdmin
             .from('app_settings')
-            .upsert({ key: 'qualified_third_places', value: [] });
+            .update({ value: [] })
+            .eq('key', 'qualified_third_places');
 
         if (thirdPlacesError) {
             console.error('Error wiping qualified third places:', thirdPlacesError);
