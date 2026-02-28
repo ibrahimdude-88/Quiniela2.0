@@ -1080,7 +1080,7 @@ window.resetApp = async () => {
             }
         }
 
-        // 4. Reset Matches
+        // 4. Reset Matches Scores and Status
         const { error: matchError, data: updatedMatches } = await supabaseAdmin
             .from('matches')
             .update({
@@ -1097,6 +1097,21 @@ window.resetApp = async () => {
             alert('Error reseteando partidos: ' + matchError.message);
         } else {
             console.log(`[RESET APP] Matches reset: ${updatedMatches?.length}`);
+        }
+
+        // 5. Reset Knockout Brackets (Matchday >= 4)
+        const { error: bracketError } = await supabaseAdmin
+            .from('matches')
+            .update({
+                home_team: 'TBD',
+                away_team: 'TBD'
+            })
+            .gte('matchday', 4);
+
+        if (bracketError) {
+            console.error('Error wiping brackets:', bracketError);
+        } else {
+            console.log('[RESET APP] Bracket teams wiped.');
         }
 
         alert('✅ Aplicación reiniciada. La página se recargará.');
