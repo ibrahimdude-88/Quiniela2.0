@@ -1170,6 +1170,17 @@ window.resetApp = async () => {
             console.log('[RESET APP] Bracket teams wiped.');
         }
 
+        // 6. Reset Qualified Third Places
+        const { error: thirdPlacesError } = await supabaseAdmin
+            .from('app_settings')
+            .upsert({ key: 'qualified_third_places', value: [] });
+
+        if (thirdPlacesError) {
+            console.error('Error wiping qualified third places:', thirdPlacesError);
+        } else {
+            console.log('[RESET APP] Qualified third places wiped.');
+        }
+
         alert('✅ Aplicación reiniciada. La página se recargará.');
         window.location.reload();
 
@@ -2123,6 +2134,32 @@ window.resetApp = async () => {
         // 5. Force Recalculate (Just in case)
         if (typeof updateAllProfilesPoints === 'function') {
             await updateAllProfilesPoints();
+        }
+
+        // 6. Reset Knockout Brackets (Matchday >= 4)
+        const { error: bracketError } = await supabaseAdmin
+            .from('matches')
+            .update({
+                home_team: 'TBD',
+                away_team: 'TBD'
+            })
+            .gte('matchday', 4);
+
+        if (bracketError) {
+            console.error('Error wiping brackets:', bracketError);
+        } else {
+            console.log('[RESET APP] Bracket teams wiped.');
+        }
+
+        // 7. Reset Qualified Third Places
+        const { error: thirdPlacesError } = await supabaseAdmin
+            .from('app_settings')
+            .upsert({ key: 'qualified_third_places', value: [] });
+
+        if (thirdPlacesError) {
+            console.error('Error wiping qualified third places:', thirdPlacesError);
+        } else {
+            console.log('[RESET APP] Qualified third places wiped.');
         }
 
         alert('✅ Éxito. Aplicación reiniciada a cero.');
