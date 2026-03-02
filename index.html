@@ -433,7 +433,7 @@
                 </div>
             </div>
             <!-- Pan/Zoom Stage -->
-            <div id="bracket-stage" style="flex:1;overflow:hidden;position:relative;cursor:grab;">
+            <div id="bracket-stage" style="flex:1;overflow:hidden;position:relative;cursor:grab;touch-action:none;">
                 <div id="bracket-canvas"
                     style="position:absolute;top:50%;left:50%;transform-origin:center;transform:translate(-50%,-50%) scale(0.8);">
                     <div id="bracket-container" style="display:flex;align-items:center;gap:40px;padding:60px;"></div>
@@ -475,7 +475,7 @@
                 const achModal = document.getElementById('achievements-modal');
                 if (achModal && !achModal.classList.contains('hidden')) window.toggleAchievements();
                 const bracketModal = document.getElementById('bracket-modal');
-                if (bracketModal && !bracketModal.classList.contains('hidden')) window.toggleBracket();
+                if (bracketModal && bracketModal.style.display === 'flex') window.toggleBracket();
             }
         </script>
 

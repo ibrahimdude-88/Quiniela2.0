@@ -19,8 +19,10 @@
         var isOpen = modal.style.display === 'flex';
         if (isOpen) {
             modal.style.display = 'none';
+            document.body.style.overflow = '';
         } else {
             modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
             bScale = 0.8; bOX = 0; bOY = 0;
             _applyTransform();
             _initDrag();
@@ -35,7 +37,10 @@
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             var m = document.getElementById('bracket-modal');
-            if (m && m.style.display === 'flex') m.style.display = 'none';
+            if (m && m.style.display === 'flex') {
+                m.style.display = 'none';
+                document.body.style.overflow = '';
+            }
         }
     });
 
@@ -62,6 +67,11 @@
         var stage = document.getElementById('bracket-stage');
         if (!stage || stage._bInited) return;
         stage._bInited = true;
+
+        // Prevent typical iOS scroll behavior (bounce, pull-to-refresh) while on the bracket stage
+        stage.addEventListener('touchmove', function (e) {
+            e.preventDefault();
+        }, { passive: false });
 
         stage.addEventListener('pointerdown', function (e) {
             if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
