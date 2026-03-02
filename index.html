@@ -444,6 +444,15 @@
         <!-- Scripts for Modals -->
         <script>
             function openModal(id) {
+                if (id === 'ranking-modal') {
+                    if (window.matches) {
+                        const hasJ1Results = window.matches.some(m => m.matchday >= 1 && (m.status === 'f' || m.home_score !== null));
+                        if (!hasJ1Results) {
+                            alert('El ranking estará disponible una vez que el administrador capture los resultados de la Jornada 1 en adelante.');
+                            return;
+                        }
+                    }
+                }
                 const modal = document.getElementById(id);
                 if (modal) {
                     modal.classList.remove('hidden');

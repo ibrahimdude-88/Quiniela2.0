@@ -542,6 +542,13 @@ async function loadSettings() {
             document.getElementById('dist-3').value = distSetting.value[2];
         }
 
+        const regEnabledSetting = data.find(s => s.key === 'registration_enabled');
+        if (regEnabledSetting !== undefined) {
+            document.getElementById('reg-enabled').checked = regEnabledSetting.value;
+        } else {
+            document.getElementById('reg-enabled').checked = true;
+        }
+
         // Matchday Status Toggles UI
         const settingsCard = document.querySelector('.bg-surface-dark .space-y-4');
         let matchdayStatusDiv = document.getElementById('matchday-status-toggles');
@@ -1273,8 +1280,13 @@ function setupEventListeners() {
             const d1 = document.getElementById('dist-1').value;
             const d2 = document.getElementById('dist-2').value;
             const d3 = document.getElementById('dist-3').value;
+            const regEnabled = document.getElementById('reg-enabled').checked;
+
             if (fee) await supabase.from('app_settings').upsert({ key: 'entry_fee', value: parseInt(fee) });
             if (d1 && d2 && d3) await supabase.from('app_settings').upsert({ key: 'prize_distribution', value: [parseInt(d1), parseInt(d2), parseInt(d3)] });
+
+            await supabase.from('app_settings').upsert({ key: 'registration_enabled', value: regEnabled });
+
             alert('Configuración guardada');
         };
     }

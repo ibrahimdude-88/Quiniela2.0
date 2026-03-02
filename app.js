@@ -787,7 +787,9 @@ async function loadRanking() {
     const heroRank = document.getElementById('hero-rank');
     if (heroRank) heroRank.textContent = `#${myRank}`;
 
-    if (myRank !== '-' && !window.appState_rankingModalShown) {
+    const hasJ1Results = matches.some(m => m.matchday >= 1 && (m.status === 'f' || m.home_score !== null));
+    const userPoints = currentUser?.profile?.points || 0;
+    if (myRank !== '-' && !window.appState_rankingModalShown && hasJ1Results && userPoints > 0) {
         window.appState_rankingModalShown = true;
         showRankingCelebration(myRank);
     }

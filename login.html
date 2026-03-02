@@ -13,6 +13,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <script type="module">
+        import { supabase } from './supabaseClient.js';
         import { signIn, signUp } from './auth.js';
 
         const loginForm = document.getElementById('login-form');
@@ -21,10 +22,35 @@
         const successMsg = document.getElementById('success-msg');
         const toggleLinks = document.querySelectorAll('.toggle-auth');
 
+        // Fetch Registration Enablement Setting
+        let allowRegistration = true;
+        async function fetchSettings() {
+            try {
+                const { data, error } = await supabase.from('app_settings').select('value').eq('key', 'registration_enabled').single();
+                if (!error && data) {
+                    allowRegistration = data.value;
+                }
+
+                if (!allowRegistration) {
+                    // Hide the paragraph containing the registration link
+                    const regParagraph = document.querySelector('#login-container p');
+                    if (regParagraph) regParagraph.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Error fetching settings:", err);
+            }
+        }
+
+        fetchSettings();
+
         // Toggle between Login and Register
         toggleLinks.forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
+                if (!allowRegistration && e.target.closest('#login-container')) {
+                    alert("El registro de nuevos usuarios está deshabilitado en este momento.");
+                    return;
+                }
                 document.getElementById('login-container').classList.toggle('hidden');
                 document.getElementById('register-container').classList.toggle('hidden');
                 errorMsg.classList.add('hidden');
@@ -55,6 +81,12 @@
         // Handle Registration
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!allowRegistration) {
+                errorMsg.textContent = 'El registro de nuevos usuarios está deshabilitado.';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
             errorMsg.classList.add('hidden');
             successMsg.classList.add('hidden');
 
