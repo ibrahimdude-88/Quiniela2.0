@@ -701,10 +701,9 @@ function renderUsers() {
                  <button onclick="toggleAdmin('${user.id}', ${user.role !== 'admin'})" class="p-1.5 rounded-lg hover:bg-white/10 transition-colors ${user.role === 'admin' ? 'text-accent-gold' : 'text-slate-600'}">
                     <span class="material-icons text-sm">shield</span>
                  </button>
-                 ${user.is_test ? `
-                 <button onclick="deleteTestUser('${user.id}')" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors">
+                 <button onclick="deleteAnyUser('${user.id}', '${user.username || user.email || 'Usuario'}')" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors" title="Eliminar Usuario">
                     <span class="material-icons text-sm">delete</span>
-                 </button>` : ''}
+                 </button>
             </td>
         </tr>
             `).join('');
@@ -1203,10 +1202,12 @@ window.resetApp = async () => {
     }
 };
 
-window.deleteTestUser = async (id) => {
-    if (!confirm('¿Eliminar este usuario de prueba?')) return;
+window.deleteAnyUser = async (id, name) => {
+    if (!confirm(`⚠️ ALERTA: ¿Estás seguro de que deseas ELIMINAR permanentemente a "${name}"?\n\nEsta acción borrará al usuario y todas sus predicciones. NO SE PUEDE DESHACER.`)) return;
 
-    console.log(`[DELETE TEST USER] Deleting single user: ${id} `);
+    if (!confirm(`¿Realmente seguro de borrar a ${name}?`)) return;
+
+    console.log(`[DELETE USER] Deleting single user: ${id} `);
 
     try {
         await supabase.from('predictions').delete().eq('user_id', id);
