@@ -116,8 +116,7 @@ async function loadUsers() {
         return;
     }
 
-    const { data: predsData, error: predsError } = await supabaseAdmin
-        .from('predictions')
+    const { data: predsData, error: predsError } = await supabase.from('predictions')
         .select('user_id, match_id, home_score, away_score');
 
     const allPreds = predsData || [];
@@ -135,7 +134,7 @@ async function loadUsers() {
 
 async function loadMatches() {
     try {
-        await supabaseAdmin.from('matches').delete().gt('id', 104);
+        await supabase.from('matches').delete().gt('id', 104);
     } catch (err) {
         console.error("Cleanup error:", err);
     }
@@ -764,7 +763,7 @@ function renderUserPredictionProgress(user) {
 
 window.togglePaid = async (userId, isPaid) => {
     try {
-        const { error } = await supabaseAdmin.from('profiles').update({ paid: isPaid }).eq('id', userId);
+        const { error } = await supabase.from('profiles').update({ paid: isPaid }).eq('id', userId);
         if (error) throw error;
         await loadUsers();
     } catch (err) {
@@ -776,7 +775,7 @@ window.togglePaid = async (userId, isPaid) => {
 window.toggleAdmin = async (userId, makeAdmin) => {
     if (!confirm(`¿${makeAdmin ? 'Dar' : 'Quitar'} permisos de admin a este usuario ? `)) return;
     try {
-        const { error } = await supabaseAdmin.from('profiles').update({ role: makeAdmin ? 'admin' : 'user' }).eq('id', userId);
+        const { error } = await supabase.from('profiles').update({ role: makeAdmin ? 'admin' : 'user' }).eq('id', userId);
         if (error) throw error;
         await loadUsers();
     } catch (err) {
@@ -890,7 +889,7 @@ window.simulateGroupStageResults = async () => {
         console.log('[SIMULATE] Generating random predictions for ALL users...');
 
         // Fetch ALL profiles
-        const { data: allPROFILES, error: profileErr } = await supabaseAdmin.from('profiles').select('id');
+        const { data: allPROFILES, error: profileErr } = await supabase.from('profiles').select('id');
         if (profileErr) throw profileErr;
 
         if (allPROFILES && allPROFILES.length > 0) {
@@ -910,7 +909,7 @@ window.simulateGroupStageResults = async () => {
 
             // Batch Upsert (All at once for efficiency)
             // Note: Upsert overwrites existing predictions if conflict on (user_id, match_id)
-            const { error: batchErr } = await supabaseAdmin.from('predictions').upsert(allPreds);
+            const { error: batchErr } = await supabase.from('predictions').upsert(allPreds);
 
             if (batchErr) {
                 console.error('[SIMULATE] Error batch upserting all preds:', batchErr);
@@ -929,8 +928,7 @@ window.simulateGroupStageResults = async () => {
             const newAwayScore = Math.floor(Math.random() * 4);
 
             // 1. Update Match
-            const { error } = await supabaseAdmin
-                .from('matches')
+            const { error } = await supabase.from('matches')
                 .update({
                     home_score: newHomeScore,
                     away_score: newAwayScore,
@@ -945,8 +943,7 @@ window.simulateGroupStageResults = async () => {
 
             // 2. Calculate Points MANUALLY for ALL predictions for this match
             // This ensures test users get points even if RPC fails or triggers are missing
-            const { data: currentPreds } = await supabaseAdmin
-                .from('predictions')
+            const { data: currentPreds } = await supabase.from('predictions')
                 .select('*')
                 .eq('match_id', match.id);
 
@@ -977,8 +974,7 @@ window.simulateGroupStageResults = async () => {
                     }
 
                     if (pts !== p.points_earned) {
-                        await supabaseAdmin
-                            .from('predictions')
+                        await supabase.from('predictions')
                             .update({ points_earned: pts })
                             .eq('id', p.id);
                     }
@@ -1012,7 +1008,7 @@ async function updateAllProfilesPoints() {
     console.log('[UPDATE PROFILES] Starting update...');
     try {
         // 1. Fetch all users to initialize
-        const { data: users, error: userError } = await supabaseAdmin.from('profiles').select('id');
+        const { data: users, error: userError } = await supabase.from('profiles').select('id');
         if (userError) throw userError;
 
         const userPoints = {};
@@ -1020,8 +1016,7 @@ async function updateAllProfilesPoints() {
         users.forEach(u => { userPoints[u.id] = 0; userExacts[u.id] = 0; }); // Init all to 0
 
         // 2. Fetch all predictions with points > 0
-        const { data: preds, error } = await supabaseAdmin
-            .from('predictions')
+        const { data: preds, error } = await supabase.from('predictions')
             .select('user_id, points_earned')
             .gt('points_earned', 0); // Only positive points matter for sum
 
@@ -1053,8 +1048,7 @@ async function updateAllProfilesPoints() {
             // Only include exact_score_count if we haven't detected it's missing
             if (!exactMatchesMissing) updates.exact_score_count = userExacts[uid];
 
-            const { error } = await supabaseAdmin
-                .from('profiles')
+            const { error } = await supabase.from('profiles')
                 .update(updates)
                 .eq('id', uid);
 
@@ -1065,8 +1059,7 @@ async function updateAllProfilesPoints() {
                     exactMatchesMissing = true; // Flag to skip column for rest
 
                     // Retry immediately without exact_score_count
-                    const { error: retryError } = await supabaseAdmin
-                        .from('profiles')
+                    const { error: retryError } = await supabase.from('profiles')
                         .update({ points: userPoints[uid] }) // Points only
                         .eq('id', uid);
 
@@ -1103,8 +1096,7 @@ window.resetApp = async () => {
 
         // 1. Delete Predictions (All) using UUID filter trick
         // neq '00000000-...' usually matches all standard UUIDs
-        const { error: predError, count: predCount } = await supabaseAdmin
-            .from('predictions')
+        const { error: predError, count: predCount } = await supabase.from('predictions')
             .delete({ count: 'exact' })
             .neq('id', '00000000-0000-0000-0000-000000000000');
 
@@ -1127,16 +1119,15 @@ window.resetApp = async () => {
 
         // 3. Reset ALL Profile Points (Everyone gets 0)
         // Diagnostic
-        const { data: userBefore } = await supabaseAdmin.from('profiles').select('points').eq('id', user.id).single();
+        const { data: userBefore } = await supabase.from('profiles').select('points').eq('id', user.id).single();
         const startPoints = userBefore ? userBefore.points : 'unknown';
 
-        const { error: profileError, count: profileCount } = await supabaseAdmin
-            .from('profiles')
+        const { error: profileError, count: profileCount } = await supabase.from('profiles')
             .update({ points: 0, exact_score_count: 0 })
             .neq('id', '00000000-0000-0000-0000-000000000000') // Trick to update all records
             .select('*', { count: 'exact' });
 
-        const { data: userAfter } = await supabaseAdmin.from('profiles').select('points').eq('id', user.id).single();
+        const { data: userAfter } = await supabase.from('profiles').select('points').eq('id', user.id).single();
         const endPoints = userAfter ? userAfter.points : 'unknown';
 
         if (profileError) {
@@ -1152,8 +1143,7 @@ window.resetApp = async () => {
         }
 
         // 4. Reset Matches Scores and Status
-        const { error: matchError, data: updatedMatches } = await supabaseAdmin
-            .from('matches')
+        const { error: matchError, data: updatedMatches } = await supabase.from('matches')
             .update({
                 home_score: null,
                 away_score: null,
@@ -1171,8 +1161,7 @@ window.resetApp = async () => {
         }
 
         // 5. Reset Knockout Brackets (Matchday >= 4)
-        const { error: bracketError } = await supabaseAdmin
-            .from('matches')
+        const { error: bracketError } = await supabase.from('matches')
             .update({
                 home_team: 'TBD',
                 away_team: 'TBD'
@@ -1186,8 +1175,7 @@ window.resetApp = async () => {
         }
 
         // 6. Reset Qualified Third Places
-        const { error: thirdPlacesError } = await supabaseAdmin
-            .from('app_settings')
+        const { error: thirdPlacesError } = await supabase.from('app_settings')
             .update({ value: [] })
             .eq('key', 'qualified_third_places');
 
@@ -1436,7 +1424,7 @@ window.confirmDeletePredictions = async () => {
 
         if (matchIds.length === 0) return alert('No hay partidos en esta jornada');
 
-        const { error } = await supabaseAdmin.from('predictions').delete().eq('user_id', userId).in('match_id', matchIds);
+        const { error } = await supabase.from('predictions').delete().eq('user_id', userId).in('match_id', matchIds);
 
         if (error) alert('Error al eliminar: ' + error.message);
         else {
@@ -1448,7 +1436,7 @@ window.confirmDeletePredictions = async () => {
         const gameText = document.getElementById('delete-game-select').selectedOptions[0].text;
         if (!confirm(`¿Estás seguro de eliminar el pronóstico de ${gameText} para ${userName}?`)) return;
 
-        const { error } = await supabaseAdmin.from('predictions').delete().eq('user_id', userId).eq('match_id', gameId);
+        const { error } = await supabase.from('predictions').delete().eq('user_id', userId).eq('match_id', gameId);
 
         if (error) alert('Error al eliminar: ' + error.message);
         else {
@@ -2011,9 +1999,8 @@ window.automateBracket = async () => {
         console.log('[BRACKET AUTO] Prepared updates:', updates);
 
         // 5. Exec Updates (Batch if possible, or loop)
-        // Since we have an array, we can loop. For better UX, loop and upsert.
         for (const update of updates) {
-            const { error } = await supabaseAdmin
+            const { error } = await supabase
                 .from('matches')
                 .update({ home_team: update.home_team, away_team: update.away_team })
                 .eq('id', update.id);
@@ -2045,34 +2032,34 @@ async function fixTournamentSchedule() {
         const { data: m73 } = await supabase.from('matches').select('id').eq('id', 73).single();
         if (!m73) {
             console.log('[FIX] Creating Match 73...');
-            await supabaseAdmin.from('matches').insert({
+            await supabase.from('matches').insert({
                 id: 73, home_team: '2A', away_team: '2B', matchday: 4, group_name: 'RO32', status: 's', date: '2026-06-28 12:00:00+00'
             });
         }
 
         // Define ranges
         // Round of 32 (16vos)
-        await supabaseAdmin.from('matches')
+        await supabase.from('matches')
             .update({ matchday: 4, group_name: 'RO32' })
             .gte('id', 73).lte('id', 88);
 
         // Round of 16 (Octavos)
-        await supabaseAdmin.from('matches')
+        await supabase.from('matches')
             .update({ matchday: 5, group_name: 'RO16' })
             .gte('id', 89).lte('id', 96);
 
         // Quarter Finals
-        await supabaseAdmin.from('matches')
+        await supabase.from('matches')
             .update({ matchday: 6, group_name: 'QF' })
             .gte('id', 97).lte('id', 100);
 
         // Semi Finals
-        await supabaseAdmin.from('matches')
+        await supabase.from('matches')
             .update({ matchday: 7, group_name: 'SF' })
             .gte('id', 101).lte('id', 102);
 
         // Final & 3rd
-        await supabaseAdmin.from('matches')
+        await supabase.from('matches')
             .update({ matchday: 8, group_name: 'FIN' })
             .gte('id', 103).lte('id', 104);
 
@@ -2109,8 +2096,7 @@ window.resetApp = async () => {
 
         // 1. Delete Predictions (All)
         // neq '0000...' (UUID) covers all
-        const { error: pErr } = await supabaseAdmin
-            .from('predictions')
+        const { error: pErr } = await supabase.from('predictions')
             .delete({ count: 'exact' })
             .neq('id', '00000000-0000-0000-0000-000000000000');
 
@@ -2127,8 +2113,7 @@ window.resetApp = async () => {
         }
 
         // 3. Reset Matches
-        const { error: mErr } = await supabaseAdmin
-            .from('matches')
+        const { error: mErr } = await supabase.from('matches')
             .update({ home_score: null, away_score: null, status: 'a', penalty_winner: null })
             .gt('id', 0);
 
@@ -2136,16 +2121,14 @@ window.resetApp = async () => {
 
         // 4. Reset Admin Profile - SPECIFICALLY by ID
         // 4. Reset Admin - Standard (points + exacts)
-        const { error: uErr } = await supabaseAdmin
-            .from('profiles')
+        const { error: uErr } = await supabase.from('profiles')
             .update({ points: 0, exact_score_count: 0 })
             .eq('id', user.id);
 
         // Fallback if exact_score_count missing
         if (uErr) {
             console.warn('Standard reset failed, trying fallback:', uErr);
-            const { error: uErr2 } = await supabaseAdmin
-                .from('profiles')
+            const { error: uErr2 } = await supabase.from('profiles')
                 .update({ points: 0 }) // Points only
                 .eq('id', user.id);
 
@@ -2164,8 +2147,7 @@ window.resetApp = async () => {
         }
 
         // 6. Reset Knockout Brackets (Matchday >= 4)
-        const { error: bracketError } = await supabaseAdmin
-            .from('matches')
+        const { error: bracketError } = await supabase.from('matches')
             .update({
                 home_team: 'TBD',
                 away_team: 'TBD'
@@ -2179,8 +2161,7 @@ window.resetApp = async () => {
         }
 
         // 7. Reset Qualified Third Places
-        const { error: thirdPlacesError } = await supabaseAdmin
-            .from('app_settings')
+        const { error: thirdPlacesError } = await supabase.from('app_settings')
             .update({ value: [] })
             .eq('key', 'qualified_third_places');
 
