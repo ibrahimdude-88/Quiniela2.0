@@ -134,6 +134,12 @@ async function loadUsers() {
 }
 
 async function loadMatches() {
+    try {
+        await supabaseAdmin.from('matches').delete().gt('id', 104);
+    } catch (err) {
+        console.error("Cleanup error:", err);
+    }
+
     const { data, error } = await supabase
         .from('matches')
         .select('*')
@@ -143,7 +149,10 @@ async function loadMatches() {
         console.error("Error loading matches:", error);
         return;
     }
-    matches = data;
+
+    // Filter out invalid duplicated matches (like ID 105+)
+    matches = data.filter(m => m.id <= 104);
+
     renderMatches();
     if (users.length > 0) renderUsers(); // Re-render to show matchday progress correctly once matches arrive
 }

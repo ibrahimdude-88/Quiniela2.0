@@ -173,7 +173,10 @@ async function loadData() {
             .order('date', { ascending: true });
 
         if (matchesError) throw matchesError;
-        matches = matchesData || [];
+
+        // Filter out invalid duplicated matches (like ID 105+)
+        matches = (matchesData || []).filter(m => m.id <= 104);
+
         window.matches = matches; // Expose globally for bracket
         console.log('[DATA] Matches loaded:', matches.length);
 
