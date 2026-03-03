@@ -1464,15 +1464,21 @@ window.clearResults = async () => {
     let clearedCount = 0;
 
     for (const match of currentMatches) {
-        // Clear if finalized, has score, OR is 's' (scheduled/locked) to force unlock
         if (match.status === 'f' || match.home_score !== null || match.status === 's') {
             try {
-                // Use RPC to reset match and recalculate points for all affected users
-                const { error } = await supabase.rpc('clear_match_stats', {
-                    target_match_id: match.id
-                });
+                // Update match manually using admin to bypass constraints
+                const { error: matchErr } = await supabaseAdmin.from('matches')
+                    .update({ home_score: null, away_score: null, status: 'a', penalty_winner: null })
+                    .eq('id', match.id);
 
-                if (error) throw error;
+                if (matchErr) throw matchErr;
+
+                // Reset points for all predictions of this match
+                const { error: predErr } = await supabaseAdmin.from('predictions')
+                    .update({ points_earned: 0 })
+                    .eq('match_id', match.id);
+
+                if (predErr) throw predErr;
 
                 clearedCount++;
             } catch (err) {
@@ -1482,6 +1488,8 @@ window.clearResults = async () => {
     }
 
     if (clearedCount > 0) {
+        console.log('[CLEAR] Matches cleared. Recalculating profile totals...');
+        await updateAllProfilesPoints(); // Thoroughly recalculate user points globally
         alert(`✅ ${clearedCount} resultados borrados y puntos restablecidos.`);
         await loadMatches(); // Refresh data
         await loadUsers();   // Refresh leaderboard points
@@ -1884,6 +1892,20 @@ window.automateBracket = async () => {
         // 1. Ensure Standings are up to date
         await calculateStandings();
 
+        // 1.5 Auto-Pick Top 8 Third-Place Teams
+        const thirdPlaceCandidates = [];
+        Object.values(allGroupStandings).forEach(groupData => {
+            if (groupData[2]) thirdPlaceCandidates.push(groupData[2]);
+        });
+        // Sort by Points > Goal Diff > Goals For
+        thirdPlaceCandidates.sort((a, b) => b.pts - a.pts || b.dif - a.dif || b.gf - a.gf);
+
+        // Emulate qualified list (Top 8)
+        const best8 = thirdPlaceCandidates.slice(0, 8).map(t => t.code);
+        qualifiedThirdPlaces = best8;
+
+        await supabaseAdmin.from('app_settings').upsert({ key: 'qualified_third_places', value: best8 });
+
         // 2. Define the Bracket Structure (Updated per User Request)
         // Note: For 3rd places, this logic is complex. We use generic placeholders for now.
         const structure = [
@@ -2114,8 +2136,8 @@ window.resetApp = async () => {
         console.log('[RESET APP] Starting...');
 
         // 1. Delete Predictions (All)
-        // neq '0000...' (UUID) covers all
-        const { error: pErr } = await supabase.from('predictions')
+        // using UUID so it works with strict RLS types
+        const { error: pErr } = await supabaseAdmin.from('predictions')
             .delete({ count: 'exact' })
             .neq('id', '00000000-0000-0000-0000-000000000000');
 
@@ -2132,32 +2154,26 @@ window.resetApp = async () => {
         }
 
         // 3. Reset Matches
-        const { error: mErr } = await supabase.from('matches')
+        const { error: mErr } = await supabaseAdmin.from('matches')
             .update({ home_score: null, away_score: null, status: 'a', penalty_winner: null })
             .gt('id', 0);
 
         if (mErr) throw new Error('Error reseteando partidos: ' + mErr.message);
 
-        // 4. Reset Admin Profile - SPECIFICALLY by ID
         // 4. Reset Admin - Standard (points + exacts)
-        const { error: uErr } = await supabase.from('profiles')
+        const { error: uErr } = await supabaseAdmin.from('profiles')
             .update({ points: 0, exact_score_count: 0 })
-            .eq('id', user.id);
+            .neq('id', '00000000-0000-0000-0000-000000000000');
 
         // Fallback if exact_score_count missing
         if (uErr) {
             console.warn('Standard reset failed, trying fallback:', uErr);
-            const { error: uErr2 } = await supabase.from('profiles')
+            const { error: uErr2 } = await supabaseAdmin.from('profiles')
                 .update({ points: 0 }) // Points only
-                .eq('id', user.id);
+                .neq('id', '00000000-0000-0000-0000-000000000000');
 
             if (uErr2) throw uErr2; // Both failed
-            alert('Aviso: Puntos reseteados, pero falta columna "exact_score_count".');
-        }
-
-        if (uErr) {
-            console.error('Error manual profile reset:', uErr);
-            alert('Error reset profile: ' + uErr.message);
+            console.log('Aviso: Puntos reseteados, pero falta columna "exact_score_count".');
         }
 
         // 5. Force Recalculate (Just in case)
