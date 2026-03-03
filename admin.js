@@ -763,7 +763,7 @@ function renderUserPredictionProgress(user) {
 
 window.togglePaid = async (userId, isPaid) => {
     try {
-        const { error } = await supabase.from('profiles').update({ paid: isPaid }).eq('id', userId);
+        const { error } = await supabaseAdmin.from('profiles').update({ paid: isPaid }).eq('id', userId);
         if (error) throw error;
         await loadUsers();
     } catch (err) {
@@ -775,7 +775,7 @@ window.togglePaid = async (userId, isPaid) => {
 window.toggleAdmin = async (userId, makeAdmin) => {
     if (!confirm(`¿${makeAdmin ? 'Dar' : 'Quitar'} permisos de admin a este usuario ? `)) return;
     try {
-        const { error } = await supabase.from('profiles').update({ role: makeAdmin ? 'admin' : 'user' }).eq('id', userId);
+        const { error } = await supabaseAdmin.from('profiles').update({ role: makeAdmin ? 'admin' : 'user' }).eq('id', userId);
         if (error) throw error;
         await loadUsers();
     } catch (err) {
@@ -829,7 +829,7 @@ window.createTestUsers = async () => {
             await new Promise(r => setTimeout(r, 200));
 
             // 2. Upsert Profile (Ensure Paid = true)
-            const { error: profileError } = await supabase.from('profiles').upsert({
+            const { error: profileError } = await supabaseAdmin.from('profiles').upsert({
                 id: userId,
                 is_test: true,
                 paid: true, // Always paid
@@ -851,7 +851,7 @@ window.createTestUsers = async () => {
                 away_score: Math.floor(Math.random() * 4)  // 0-3
             }));
 
-            const { error: predError } = await supabase.from('predictions').insert(preds);
+            const { error: predError } = await supabaseAdmin.from('predictions').insert(preds);
 
             if (predError) {
                 console.error(`[CREATE TEST USER ${i + 1}] Predictions Error:`, predError);
@@ -909,7 +909,7 @@ window.simulateGroupStageResults = async () => {
 
             // Batch Upsert (All at once for efficiency)
             // Note: Upsert overwrites existing predictions if conflict on (user_id, match_id)
-            const { error: batchErr } = await supabase.from('predictions').upsert(allPreds);
+            const { error: batchErr } = await supabaseAdmin.from('predictions').upsert(allPreds);
 
             if (batchErr) {
                 console.error('[SIMULATE] Error batch upserting all preds:', batchErr);
@@ -928,7 +928,7 @@ window.simulateGroupStageResults = async () => {
             const newAwayScore = Math.floor(Math.random() * 4);
 
             // 1. Update Match
-            const { error } = await supabase.from('matches')
+            const { error } = await supabaseAdmin.from('matches')
                 .update({
                     home_score: newHomeScore,
                     away_score: newAwayScore,
@@ -943,7 +943,7 @@ window.simulateGroupStageResults = async () => {
 
             // 2. Calculate Points MANUALLY for ALL predictions for this match
             // This ensures test users get points even if RPC fails or triggers are missing
-            const { data: currentPreds } = await supabase.from('predictions')
+            const { data: currentPreds } = await supabaseAdmin.from('predictions')
                 .select('*')
                 .eq('match_id', match.id);
 
@@ -974,7 +974,7 @@ window.simulateGroupStageResults = async () => {
                     }
 
                     if (pts !== p.points_earned) {
-                        await supabase.from('predictions')
+                        await supabaseAdmin.from('predictions')
                             .update({ points_earned: pts })
                             .eq('id', p.id);
                     }
@@ -2001,26 +2001,31 @@ window.automateBracket = async () => {
             });
         }
 
-        console.log('[BRACKET AUTO] Prepared updates:', updates);
+        // 5. Exec Updates (Sequential but robust)
+        let successCount = 0;
+        let failCount = 0;
 
-        // 5. Exec Updates (Batch to avoid rate-limits)
-        const fullUpdates = updates.map(u => {
-            const existing = matches.find(m => m.id === u.id);
-            return {
-                ...existing,
-                home_team: u.home_team,
-                away_team: u.away_team
-            };
-        }).filter(u => u.id); // Ensure we have valid matches
+        for (const update of updates) {
+            try {
+                // We use .update to avoid overwriting fields with upsert or triggering NOT NULL errors on missing fields
+                const { error } = await supabaseAdmin
+                    .from('matches')
+                    .update({ home_team: update.home_team, away_team: update.away_team })
+                    .eq('id', update.id);
 
-        const { error } = await supabaseAdmin
-            .from('matches')
-            .upsert(fullUpdates);
-
-        if (error) {
-            console.error('Error in batch update:', error);
-            throw error;
+                if (error) {
+                    console.error(`[BRACKET AUTO] Error updating match ${update.id}:`, error);
+                    failCount++;
+                } else {
+                    successCount++;
+                }
+            } catch (innerErr) {
+                console.error(`[BRACKET AUTO] Crash on match ${update.id}:`, innerErr);
+                failCount++;
+            }
         }
+
+        console.log(`[BRACKET AUTO] Finished. Success: ${successCount}, Failed: ${failCount}`);
 
         // 6. Refresh
         await loadMatches(); // Reload match data
