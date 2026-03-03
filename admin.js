@@ -1799,6 +1799,11 @@ async function renderBracketEditor() {
             }
             placeholders.push('UEFA1', 'UEFA2', 'UEFA3', 'UEFA4', 'IC1', 'IC2', 'CPV');
 
+            // Add currentValue to placeholders if it's uniquely unresolved so it doesn't get hidden as TBD
+            if (currentValue && currentValue !== 'TBD' && !placeholders.includes(currentValue) && !qualifiedList.find(t => t.code === currentValue)) {
+                placeholders.push(currentValue);
+            }
+
             const placeholderOptions = placeholders.map(p =>
                 `<option value="${p}" ${p === currentValue ? 'selected' : ''}>${p}</option>`
             ).join('');
@@ -1998,14 +2003,23 @@ window.automateBracket = async () => {
 
         console.log('[BRACKET AUTO] Prepared updates:', updates);
 
-        // 5. Exec Updates (Batch if possible, or loop)
-        for (const update of updates) {
-            const { error } = await supabase
-                .from('matches')
-                .update({ home_team: update.home_team, away_team: update.away_team })
-                .eq('id', update.id);
+        // 5. Exec Updates (Batch to avoid rate-limits)
+        const fullUpdates = updates.map(u => {
+            const existing = matches.find(m => m.id === u.id);
+            return {
+                ...existing,
+                home_team: u.home_team,
+                away_team: u.away_team
+            };
+        }).filter(u => u.id); // Ensure we have valid matches
 
-            if (error) console.error(`Error updating match ${update.id}`, error);
+        const { error } = await supabaseAdmin
+            .from('matches')
+            .upsert(fullUpdates);
+
+        if (error) {
+            console.error('Error in batch update:', error);
+            throw error;
         }
 
         // 6. Refresh
@@ -2032,34 +2046,34 @@ async function fixTournamentSchedule() {
         const { data: m73 } = await supabase.from('matches').select('id').eq('id', 73).single();
         if (!m73) {
             console.log('[FIX] Creating Match 73...');
-            await supabase.from('matches').insert({
+            await supabaseAdmin.from('matches').insert({
                 id: 73, home_team: '2A', away_team: '2B', matchday: 4, group_name: 'RO32', status: 's', date: '2026-06-28 12:00:00+00'
             });
         }
 
         // Define ranges
         // Round of 32 (16vos)
-        await supabase.from('matches')
+        await supabaseAdmin.from('matches')
             .update({ matchday: 4, group_name: 'RO32' })
             .gte('id', 73).lte('id', 88);
 
         // Round of 16 (Octavos)
-        await supabase.from('matches')
+        await supabaseAdmin.from('matches')
             .update({ matchday: 5, group_name: 'RO16' })
             .gte('id', 89).lte('id', 96);
 
         // Quarter Finals
-        await supabase.from('matches')
+        await supabaseAdmin.from('matches')
             .update({ matchday: 6, group_name: 'QF' })
             .gte('id', 97).lte('id', 100);
 
         // Semi Finals
-        await supabase.from('matches')
+        await supabaseAdmin.from('matches')
             .update({ matchday: 7, group_name: 'SF' })
             .gte('id', 101).lte('id', 102);
 
         // Final & 3rd
-        await supabase.from('matches')
+        await supabaseAdmin.from('matches')
             .update({ matchday: 8, group_name: 'FIN' })
             .gte('id', 103).lte('id', 104);
 
