@@ -343,12 +343,13 @@
 
     // ── Helpers ──────────────────────────────────────────────────
 
-    // Resolves W{id} codes to the actual winner team code if match is finished
+    // Resolves W{id} or L{id} codes to the actual team code if match is finished
     function _resolveTeam(code) {
         if (!code) return null;
         var s = String(code);
-        if (s.charAt(0) !== 'W') return code; // Already a real team code
+        if (s.charAt(0) !== 'W' && s.charAt(0) !== 'L') return code;
 
+        var isWinner = s.charAt(0) === 'W';
         var matchId = parseInt(s.slice(1), 10);
         if (isNaN(matchId)) return code;
 
@@ -356,16 +357,18 @@
         for (var i = 0; i < ms.length; i++) {
             var m = ms[i];
             if (+m.id === matchId && m.status === 'f') {
-                // Determine actual winner
-                if (m.penalty_winner === 'home') return m.home_team;
-                if (m.penalty_winner === 'away') return m.away_team;
+                if (m.penalty_winner) {
+                    var w = m.penalty_winner === 'home' ? m.home_team : m.away_team;
+                    var l = m.penalty_winner === 'home' ? m.away_team : m.home_team;
+                    return _resolveTeam(isWinner ? w : l);
+                }
                 if (m.home_score != null && m.away_score != null) {
-                    if (+m.home_score > +m.away_score) return m.home_team;
-                    if (+m.away_score > +m.home_score) return m.away_team;
+                    if (+m.home_score > +m.away_score) return _resolveTeam(isWinner ? m.home_team : m.away_team);
+                    if (+m.away_score > +m.home_score) return _resolveTeam(isWinner ? m.away_team : m.home_team);
                 }
             }
         }
-        return code; // Match not finished or not found – keep W-code
+        return code; // Match not finished or not found – keep code
     }
 
     function _srcId(code) {

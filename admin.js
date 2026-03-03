@@ -1965,16 +1965,16 @@ window.automateBracket = async () => {
                 if (previousMatch && previousMatch.status === 'f') {
                     // Check penalties first
                     if (previousMatch.penalty_winner) {
-                        return previousMatch.penalty_winner === 'home'
-                            ? (isWinner ? previousMatch.home_team : previousMatch.away_team)
-                            : (isWinner ? previousMatch.away_team : previousMatch.home_team);
+                        const winCode = previousMatch.penalty_winner === 'home' ? previousMatch.home_team : previousMatch.away_team;
+                        const loseCode = previousMatch.penalty_winner === 'home' ? previousMatch.away_team : previousMatch.home_team;
+                        return getTeam(isWinner ? winCode : loseCode);
                     }
                     // Check regular score
                     if (previousMatch.home_score !== null && previousMatch.away_score !== null) {
                         if (previousMatch.home_score > previousMatch.away_score) {
-                            return isWinner ? previousMatch.home_team : previousMatch.away_team;
+                            return getTeam(isWinner ? previousMatch.home_team : previousMatch.away_team);
                         } else if (previousMatch.away_score > previousMatch.home_score) {
-                            return isWinner ? previousMatch.away_team : previousMatch.home_team;
+                            return getTeam(isWinner ? previousMatch.away_team : previousMatch.home_team);
                         }
                     }
                 }
