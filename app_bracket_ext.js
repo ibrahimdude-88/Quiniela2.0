@@ -344,10 +344,88 @@
         var homeRaw = (match.home_team && String(match.home_team).trim()) ? match.home_team : (hFallback || null);
         var awayRaw = (match.away_team && String(match.away_team).trim()) ? match.away_team : (aFallback || null);
 
-        // Resolve W/L codes → real team codes (winner/loser of source match)
+        // Resolve W/L codes → real team codes
         var homeTeam = _resolveTeam(homeRaw) || homeRaw;
         var awayTeam = _resolveTeam(awayRaw) || awayRaw;
 
+        // ── CHAMPION CARD (match 104, finished) ───────────────────
+        var isChampion = (+match.id === 104 && fin);
+        if (isChampion) {
+            // Determine winner
+            var champTeam = null;
+            if (match.penalty_winner) {
+                champTeam = match.penalty_winner === 'home' ? homeTeam : awayTeam;
+            } else if (match.home_score != null && match.away_score != null) {
+                if (+match.home_score > +match.away_score) champTeam = homeTeam;
+                else if (+match.away_score > +match.home_score) champTeam = awayTeam;
+            }
+
+            var el = document.createElement('div');
+            el.style.cssText = [
+                'width:240px',
+                'border-radius:14px',
+                'padding:14px 16px',
+                'font-family:ui-sans-serif,system-ui,sans-serif',
+                'flex-shrink:0',
+                'position:relative',
+                'overflow:visible',
+                // Animated golden glow border via box-shadow
+                'box-shadow:0 0 0 2px #f59e0b, 0 0 24px 4px rgba(251,191,36,0.55), 0 8px 32px rgba(0,0,0,0.6)',
+                'background:linear-gradient(145deg,#1a2235 0%,#0f1a2e 60%,#1c2540 100%)',
+                'animation:wc-trophy-pulse 2.2s ease-in-out infinite'
+            ].join(';');
+
+            // Inject keyframe if not already present
+            if (!document.getElementById('champ-card-style')) {
+                var s = document.createElement('style');
+                s.id = 'champ-card-style';
+                s.textContent = '@keyframes champ-glow{0%,100%{box-shadow:0 0 0 2px #f59e0b,0 0 24px 4px rgba(251,191,36,0.55),0 8px 32px rgba(0,0,0,0.6)}50%{box-shadow:0 0 0 2px #fde68a,0 0 40px 10px rgba(251,191,36,0.8),0 8px 32px rgba(0,0,0,0.6)}}';
+                document.head.appendChild(s);
+                el.style.animation = 'champ-glow 2.2s ease-in-out infinite';
+            } else {
+                el.style.animation = 'champ-glow 2.2s ease-in-out infinite';
+            }
+
+            // Crown + label
+            var crown = '<div style="text-align:center;margin-bottom:10px;">' +
+                '<span style="font-size:22px;line-height:1;">👑</span>' +
+                '<div style="font-size:9px;font-weight:900;letter-spacing:0.2em;color:#d97706;text-transform:uppercase;margin-top:2px;">CAMPEÓN 2026</div>' +
+                '</div>';
+
+            // Row builder with big flag + uppercase name
+            function champRow(team, score, isWinner) {
+                var nameColor = isWinner ? '#fbbf24' : '#475569';
+                var scoreColor = isWinner ? '#fbbf24' : '#334155';
+                var flagBorder = isWinner ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)';
+                var winnerBadge = isWinner ? '<span style="font-size:9px;color:#fbbf24;margin-left:4px;">★</span>' : '';
+                return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                    '<div style="display:flex;align-items:center;gap:8px;overflow:hidden;">' +
+                    '<img src="' + _flag(team) + '" style="width:28px;height:20px;border-radius:3px;object-fit:cover;flex-shrink:0;border:' + flagBorder + ';" onerror="this.src=\'https://flagcdn.com/w40/un.png\'">' +
+                    '<span style="font-size:13px;font-weight:900;color:' + nameColor + ';text-transform:uppercase;letter-spacing:0.05em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">' +
+                    (team ? _name(team) : 'TBD') + winnerBadge + '</span>' +
+                    '</div>' +
+                    '<span style="font-family:monospace;font-size:20px;font-weight:900;color:' + scoreColor + ';padding-left:8px;">' + score + '</span>' +
+                    '</div>';
+            }
+
+            var homeWon = match.penalty_winner === 'home' || (!match.penalty_winner && +match.home_score > +match.away_score);
+            var awayWon = match.penalty_winner === 'away' || (!match.penalty_winner && +match.away_score > +match.home_score);
+
+            var penNote = match.penalty_winner
+                ? '<div style="font-size:9px;color:#78350f;border-top:1px solid rgba(251,191,36,0.2);padding-top:6px;margin-top:4px;text-align:center;font-weight:700;letter-spacing:0.08em;">PENALES: <span style="color:#fbbf24;">' +
+                (match.penalty_winner === 'home' ? _name(homeTeam) : _name(awayTeam)).toUpperCase() + '</span></div>'
+                : '';
+
+            el.innerHTML = crown +
+                '<div style="border-top:1px solid rgba(251,191,36,0.2);padding-top:10px;">' +
+                champRow(homeTeam, hs, homeWon) +
+                champRow(awayTeam, as_, awayWon) +
+                '</div>' + penNote;
+
+            return el;
+        }
+
+        // ── Normal card ───────────────────────────────────────────
         var hc = '#94a3b8', ac = '#94a3b8';
         if (fin) {
             if (+match.home_score > +match.away_score || match.penalty_winner === 'home') { hc = '#4ade80'; ac = '#334155'; }
