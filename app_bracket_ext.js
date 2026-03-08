@@ -31,25 +31,35 @@
             if (c) c.innerHTML = '<div style="color:#64748b;font-size:14px;padding:40px;">Cargando cuadro...</div>';
             setTimeout(_render, 80);
 
-            // ── World Champion check ────────────────────────────────
-            // Show the champion modal the first time the user opens the bracket
-            // if the final (match 104) already has a result.
+            // ── World Champion check ────────────────────────────────────
+            // app.js is a module that loads async — window.matches may not be
+            // populated yet when the bracket opens. Poll until it's ready.
             if (!window._wcModalShown) {
-                var ms = window.matches || [];
-                var finalMatch104 = null;
-                for (var k = 0; k < ms.length; k++) {
-                    if (+ms[k].id === 104 && ms[k].status === 'f') { finalMatch104 = ms[k]; break; }
-                }
-                if (finalMatch104) {
-                    window._wcModalShown = true;
-                    (function (fm) {
-                        setTimeout(function () {
-                            if (typeof window.showWorldChampionModal === 'function') {
-                                window.showWorldChampionModal(fm);
-                            }
-                        }, 700);
-                    })(finalMatch104);
-                }
+                var _wcAttempts = 0;
+                (function _checkChampion() {
+                    var ms = window.matches || [];
+                    var finalMatch104 = null;
+                    for (var k = 0; k < ms.length; k++) {
+                        var m = ms[k];
+                        if (+m.id === 104) {
+                            // Accept 'f' (final) or 'a' (live) with a clear winner
+                            var isResolved = m.status === 'f' ||
+                                (m.home_score != null && m.away_score != null &&
+                                    +m.home_score !== +m.away_score);
+                            if (isResolved) { finalMatch104 = m; break; }
+                        }
+                    }
+                    if (finalMatch104) {
+                        window._wcModalShown = true;
+                        if (typeof window.showWorldChampionModal === 'function') {
+                            window.showWorldChampionModal(finalMatch104);
+                        }
+                    } else if (_wcAttempts < 15 && !window._wcModalShown) {
+                        // Retry up to ~3 s while data loads
+                        _wcAttempts++;
+                        setTimeout(_checkChampion, 200);
+                    }
+                })();
             }
 
 

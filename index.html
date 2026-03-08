@@ -1141,9 +1141,56 @@
         }
 
         // ── WORLD CHAMPION MODAL ──────────────────────────────────────────────
+        // Bracket structure: matchId -> { homeSrc, awaySrc }
+        var _bracketSrc = {
+            104: { h: 101, a: 102 }, 103: { h: 101, a: 102, losers: true },
+            101: { h: 97, a: 98 }, 102: { h: 99, a: 100 },
+            97: { h: 89, a: 90 }, 98: { h: 91, a: 92 },
+            99: { h: 93, a: 94 }, 100: { h: 95, a: 96 },
+            89: { h: 74, a: 77 }, 90: { h: 73, a: 75 },
+            91: { h: 76, a: 78 }, 92: { h: 79, a: 80 },
+            93: { h: 83, a: 84 }, 94: { h: 81, a: 82 },
+            95: { h: 86, a: 88 }, 96: { h: 85, a: 87 }
+        };
+
+        // Walk the bracket chain to find the real team code for a given match slot
+        function _resolveMatchWinner(matchId, wantLoser, depth) {
+            if (depth > 6) return null;
+            var ms = window.matches || [];
+            var m = null;
+            for (var i = 0; i < ms.length; i++) { if (+ms[i].id === matchId) { m = ms[i]; break; } }
+            if (!m) return null;
+
+            // Determine home/away real codes
+            var src = _bracketSrc[matchId];
+            var homeCode = (m.home_team && !/^[WL]/.test(m.home_team))
+                ? m.home_team
+                : (src ? _resolveMatchWinner(src.h, false, depth + 1) : null);
+            var awayCode = (m.away_team && !/^[WL]/.test(m.away_team))
+                ? m.away_team
+                : (src ? _resolveMatchWinner(src.a, false, depth + 1) : null);
+
+            var winner = null, loser = null;
+            if (m.penalty_winner) {
+                winner = m.penalty_winner === 'home' ? homeCode : awayCode;
+                loser = m.penalty_winner === 'home' ? awayCode : homeCode;
+            } else if (m.home_score != null && m.away_score != null) {
+                if (+m.home_score > +m.away_score) { winner = homeCode; loser = awayCode; }
+                else if (+m.away_score > +m.home_score) { winner = awayCode; loser = homeCode; }
+            }
+            return wantLoser ? loser : winner;
+        }
+
         window.showWorldChampionModal = function (match) {
-            var homeCode = _resolveCode(match.home_team);
-            var awayCode = _resolveCode(match.away_team);
+            // Try to resolve home/away codes — walk bracket chain if fields are null
+            var src104 = _bracketSrc[104] || {};
+            var homeCode = (match.home_team && !/^[WL]/.test(match.home_team))
+                ? match.home_team
+                : _resolveMatchWinner(src104.h, false, 0);
+            var awayCode = (match.away_team && !/^[WL]/.test(match.away_team))
+                ? match.away_team
+                : _resolveMatchWinner(src104.a, false, 0);
+
             var winner = null;
             if (match.penalty_winner) {
                 winner = match.penalty_winner === 'home' ? homeCode : awayCode;
@@ -1151,15 +1198,20 @@
                 if (+match.home_score > +match.away_score) winner = homeCode;
                 else if (+match.away_score > +match.home_score) winner = awayCode;
             }
-            if (!winner || /^[WL]/.test(winner)) return; // teams not yet resolved
+
+            // If still unresolved, try walking full chain from 104
+            if (!winner) winner = _resolveMatchWinner(104, false, 0);
+            if (!winner || /^[WL]/.test(winner)) return; // genuinely not determined yet
 
             document.getElementById('wc-champion-flag').src = _getFlagUrl(winner);
             document.getElementById('wc-champion-name').textContent = _getTeamName(winner);
             var hs = match.home_score != null ? match.home_score : '-';
             var as_ = match.away_score != null ? match.away_score : '-';
             var penNote = match.penalty_winner ? ' (Pen.)' : '';
+            var hName = homeCode ? _getTeamName(homeCode) : '—';
+            var aName = awayCode ? _getTeamName(awayCode) : '—';
             document.getElementById('wc-match-score').textContent =
-                _getTeamName(homeCode) + ' ' + hs + ' \u2013 ' + as_ + ' ' + _getTeamName(awayCode) + penNote;
+                hName + ' ' + hs + ' \u2013 ' + as_ + ' ' + aName + penNote;
 
             var modal = document.getElementById('world-champion-modal');
             var inner = document.getElementById('world-champion-inner');
@@ -1171,6 +1223,8 @@
             document.body.style.overflow = 'hidden';
             setTimeout(_launchFireworks, 450);
         };
+
+
 
         window.closeWorldChampionModal = function () {
             var modal = document.getElementById('world-champion-modal');
