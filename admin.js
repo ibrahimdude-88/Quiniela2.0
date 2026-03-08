@@ -2551,15 +2551,19 @@ document.addEventListener('change', (e) => {
 async function loadSimUserList() {
     const listEl = document.getElementById('sim-user-list');
     try {
-        const { data, error } = await supabase.from('profiles').select('id, display_name, email').order('display_name');
+        const { data, error } = await supabaseAdmin
+            .from('profiles')
+            .select('id, username, full_name, email')
+            .order('username');
         if (error) throw error;
         _simAllProfiles = data || [];
         listEl.innerHTML = _simAllProfiles.map(u =>
             `<label class="flex items-center gap-2 px-1 py-1 rounded hover:bg-white/5 cursor-pointer">
                 <input type="checkbox" class="sim-user-check w-3.5 h-3.5 rounded accent-blue-500" value="${u.id}">
-                <span class="text-xs text-slate-300 truncate">${u.display_name || u.email || u.id}</span>
+                <span class="text-xs text-slate-300 truncate">${u.username || u.full_name || u.email || u.id}</span>
             </label>`
         ).join('') || '<p class="text-[10px] text-slate-500 px-1">Sin usuarios</p>';
+
     } catch (err) {
         listEl.innerHTML = `<p class="text-[10px] text-red-400 px-1">Error: ${err.message}</p>`;
     }
@@ -2586,16 +2590,24 @@ window.runSimulation = async () => {
     // ── Determine target profiles ───────────────────────────────────
     let targetProfiles = [];
     if (userTarget === 'all') {
-        const { data } = await supabase.from('profiles').select('id');
+        // Use supabaseAdmin to bypass RLS and include ALL profiles (including admin)
+        const { data, error } = await supabaseAdmin.from('profiles').select('id');
+        if (error) { addLog('Error cargando perfiles: ' + error.message, 'error'); return; }
         targetProfiles = data || [];
     } else if (userTarget === 'test') {
-        const { data } = await supabase.from('profiles').select('id').ilike('display_name', '%test%');
+        // Use supabaseAdmin so test-admin accounts are also included if they match
+        const { data, error } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .or('username.ilike.%test%,full_name.ilike.%test%,email.ilike.%test%');
+        if (error) { addLog('Error cargando perfiles test: ' + error.message, 'error'); return; }
         targetProfiles = data || [];
     } else {
         const checkedIds = [...document.querySelectorAll('.sim-user-check:checked')].map(c => c.value);
         if (checkedIds.length === 0) { alert('Selecciona al menos un usuario.'); return; }
         targetProfiles = checkedIds.map(id => ({ id }));
     }
+
 
     // ── Get target matches ──────────────────────────────────────────
     const targetMatches = matches.filter(m => selectedMatchdays.includes(m.matchday));
@@ -2663,7 +2675,8 @@ window.runSimulation = async () => {
                         });
                     });
                 });
-                const { error: bErr } = await supabaseAdmin.from('predictions').upsert(preds);
+                const { error: bErr } = await supabaseAdmin.from('predictions').upsert(preds, { onConflict: 'user_id,match_id' });
+
                 if (bErr) addLog(`Advertencia en lote ${i}: ${bErr.message}`, 'warn');
                 tick(`Predicciones: ${Math.min(i + batchSize, targetProfiles.length)}/${targetProfiles.length} usuarios`);
                 await new Promise(r => setTimeout(r, 30)); // yield to UI
