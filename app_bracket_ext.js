@@ -30,6 +30,29 @@
             var c = document.getElementById('bracket-container');
             if (c) c.innerHTML = '<div style="color:#64748b;font-size:14px;padding:40px;">Cargando cuadro...</div>';
             setTimeout(_render, 80);
+
+            // ── World Champion check ────────────────────────────────
+            // Show the champion modal the first time the user opens the bracket
+            // if the final (match 104) already has a result.
+            if (!window._wcModalShown) {
+                var ms = window.matches || [];
+                var finalMatch104 = null;
+                for (var k = 0; k < ms.length; k++) {
+                    if (+ms[k].id === 104 && ms[k].status === 'f') { finalMatch104 = ms[k]; break; }
+                }
+                if (finalMatch104) {
+                    window._wcModalShown = true;
+                    (function (fm) {
+                        setTimeout(function () {
+                            if (typeof window.showWorldChampionModal === 'function') {
+                                window.showWorldChampionModal(fm);
+                            }
+                        }, 700);
+                    })(finalMatch104);
+                }
+            }
+
+
         }
     };
 

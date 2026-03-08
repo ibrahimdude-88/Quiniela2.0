@@ -2495,3 +2495,255 @@ window.resetApp = async () => {
         if (btn) { btn.disabled = false; btn.innerHTML = 'Borrar Todo...'; }
     }
 };
+
+// ═══════════════════════════════════════════════════════════════════
+//  SIMULATE RESULTS MODAL
+// ═══════════════════════════════════════════════════════════════════
+
+let _simAllProfiles = []; // cache for user list
+
+window.openSimulateModal = async () => {
+    const modal = document.getElementById('simulate-modal');
+    const inner = document.getElementById('simulate-modal-inner');
+    // Reset state
+    document.getElementById('sim-progress-wrap').classList.add('hidden');
+    document.getElementById('sim-log').innerHTML = '';
+    document.getElementById('sim-progress-bar').style.width = '0%';
+    document.getElementById('sim-progress-pct').textContent = '0%';
+    document.getElementById('sim-run-btn').disabled = false;
+    document.getElementById('sim-run-btn').innerHTML = '<span class="material-icons text-sm">play_arrow</span> Ejecutar Simulación';
+    document.getElementById('sim-cancel-btn').disabled = false;
+
+    // Show modal
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+        inner.style.transform = 'scale(1)';
+    });
+
+    // Load user list for the "specific" option
+    await loadSimUserList();
+};
+
+window.closeSimulateModal = () => {
+    const modal = document.getElementById('simulate-modal');
+    const inner = document.getElementById('simulate-modal-inner');
+    modal.style.opacity = '0';
+    inner.style.transform = 'scale(0.93)';
+    setTimeout(() => modal.classList.add('hidden'), 220);
+};
+
+window.toggleSimUserList = (show) => {
+    const list = document.getElementById('sim-user-list');
+    if (show) list.classList.remove('hidden');
+    else list.classList.add('hidden');
+};
+
+// Listen for radio changes to show/hide user list
+document.addEventListener('change', (e) => {
+    if (e.target.name === 'sim-user-target') {
+        const list = document.getElementById('sim-user-list');
+        if (e.target.value === 'specific') list.classList.remove('hidden');
+        else list.classList.add('hidden');
+    }
+});
+
+async function loadSimUserList() {
+    const listEl = document.getElementById('sim-user-list');
+    try {
+        const { data, error } = await supabase.from('profiles').select('id, display_name, email').order('display_name');
+        if (error) throw error;
+        _simAllProfiles = data || [];
+        listEl.innerHTML = _simAllProfiles.map(u =>
+            `<label class="flex items-center gap-2 px-1 py-1 rounded hover:bg-white/5 cursor-pointer">
+                <input type="checkbox" class="sim-user-check w-3.5 h-3.5 rounded accent-blue-500" value="${u.id}">
+                <span class="text-xs text-slate-300 truncate">${u.display_name || u.email || u.id}</span>
+            </label>`
+        ).join('') || '<p class="text-[10px] text-slate-500 px-1">Sin usuarios</p>';
+    } catch (err) {
+        listEl.innerHTML = `<p class="text-[10px] text-red-400 px-1">Error: ${err.message}</p>`;
+    }
+}
+
+window.runSimulation = async () => {
+    // ── Read configuration ──────────────────────────────────────────
+    const selectedMatchdays = [...document.querySelectorAll('.sim-md-check:checked')].map(c => parseInt(c.value));
+    if (selectedMatchdays.length === 0) {
+        alert('Selecciona al menos una jornada o fase para simular.');
+        return;
+    }
+
+    const userTarget = document.querySelector('input[name="sim-user-target"]:checked')?.value || 'all';
+    const genPredictions = document.getElementById('sim-gen-predictions').checked;
+    const setResults = document.getElementById('sim-set-results').checked;
+    const calcPoints = document.getElementById('sim-calc-points').checked;
+
+    const phaseNames = { 1: 'Jornada 1', 2: 'Jornada 2', 3: 'Jornada 3', 4: '16vos', 5: 'Octavos', 6: 'Cuartos', 7: 'Semis', 8: 'Final y 3er' };
+    const phaseList = selectedMatchdays.map(d => phaseNames[d] || `Jornada ${d}`).join(', ');
+
+    if (!confirm(`¿Ejecutar simulación?\n\nFases: ${phaseList}\nUsuarios: ${userTarget === 'all' ? 'Todos' : userTarget === 'test' ? 'Solo test' : 'Específicos'}\nPredicciones: ${genPredictions ? 'Sí' : 'No'} | Resultados: ${setResults ? 'Sí' : 'No'} | Puntos: ${calcPoints ? 'Sí' : 'No'}`)) return;
+
+    // ── Determine target profiles ───────────────────────────────────
+    let targetProfiles = [];
+    if (userTarget === 'all') {
+        const { data } = await supabase.from('profiles').select('id');
+        targetProfiles = data || [];
+    } else if (userTarget === 'test') {
+        const { data } = await supabase.from('profiles').select('id').ilike('display_name', '%test%');
+        targetProfiles = data || [];
+    } else {
+        const checkedIds = [...document.querySelectorAll('.sim-user-check:checked')].map(c => c.value);
+        if (checkedIds.length === 0) { alert('Selecciona al menos un usuario.'); return; }
+        targetProfiles = checkedIds.map(id => ({ id }));
+    }
+
+    // ── Get target matches ──────────────────────────────────────────
+    const targetMatches = matches.filter(m => selectedMatchdays.includes(m.matchday));
+    if (targetMatches.length === 0) {
+        alert('No se encontraron partidos para las fases seleccionadas.');
+        return;
+    }
+
+    // ── UI: lock controls, show progress ───────────────────────────
+    const runBtn = document.getElementById('sim-run-btn');
+    const cancelBtn = document.getElementById('sim-cancel-btn');
+    const progressWrap = document.getElementById('sim-progress-wrap');
+    const progressBar = document.getElementById('sim-progress-bar');
+    const progressPct = document.getElementById('sim-progress-pct');
+    const progressLbl = document.getElementById('sim-progress-label');
+    const logEl = document.getElementById('sim-log');
+
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<span class="material-icons animate-spin text-sm">refresh</span> Simulando...';
+    cancelBtn.disabled = true;
+    progressWrap.classList.remove('hidden');
+    logEl.innerHTML = '';
+
+    const setProgress = (pct, label) => {
+        progressBar.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+        if (label) progressLbl.textContent = label;
+    };
+
+    const addLog = (text, type = 'info') => {
+        const colors = { info: 'text-slate-400', success: 'text-emerald-400', warn: 'text-yellow-400', error: 'text-red-400' };
+        const icons = { info: 'radio_button_unchecked', success: 'check_circle', warn: 'warning', error: 'error' };
+        const el = document.createElement('div');
+        el.className = `step-item flex items-start gap-1.5 ${colors[type] || colors.info}`;
+        el.innerHTML = `<span class="material-icons text-[10px] mt-0.5 flex-shrink-0">${icons[type] || icons.info}</span><span>${text}</span>`;
+        logEl.appendChild(el);
+        logEl.scrollTop = logEl.scrollHeight;
+    };
+
+    try {
+        let totalSteps = (genPredictions ? targetProfiles.length : 0) + (setResults ? targetMatches.length : 0) + (calcPoints ? 1 : 0);
+        let doneSteps = 0;
+        const tick = (label) => {
+            doneSteps++;
+            const pct = Math.round((doneSteps / Math.max(totalSteps, 1)) * 100);
+            setProgress(Math.min(pct, 98), label);
+        };
+
+        // ── Step 1: Generate random predictions ─────────────────────
+        if (genPredictions && targetProfiles.length > 0) {
+            addLog(`Generando predicciones para ${targetProfiles.length} usuarios y ${targetMatches.length} partidos...`, 'info');
+            setProgress(2, 'Generando predicciones...');
+
+            const batchSize = 50; // build in batches to avoid huge upsert
+            for (let i = 0; i < targetProfiles.length; i += batchSize) {
+                const slice = targetProfiles.slice(i, i + batchSize);
+                const preds = [];
+                slice.forEach(profile => {
+                    targetMatches.forEach(m => {
+                        preds.push({
+                            user_id: profile.id,
+                            match_id: m.id,
+                            home_score: Math.floor(Math.random() * 4),
+                            away_score: Math.floor(Math.random() * 4)
+                        });
+                    });
+                });
+                const { error: bErr } = await supabaseAdmin.from('predictions').upsert(preds);
+                if (bErr) addLog(`Advertencia en lote ${i}: ${bErr.message}`, 'warn');
+                tick(`Predicciones: ${Math.min(i + batchSize, targetProfiles.length)}/${targetProfiles.length} usuarios`);
+                await new Promise(r => setTimeout(r, 30)); // yield to UI
+            }
+            addLog(`✓ Predicciones generadas para ${targetProfiles.length} usuarios`, 'success');
+        }
+
+        // ── Step 2: Set random match results ────────────────────────
+        if (setResults) {
+            addLog(`Simulando resultados para ${targetMatches.length} partidos...`, 'info');
+            let matchOk = 0;
+            for (const match of targetMatches) {
+                const newHome = Math.floor(Math.random() * 4);
+                const newAway = Math.floor(Math.random() * 4);
+
+                const { error } = await supabaseAdmin.from('matches')
+                    .update({ home_score: newHome, away_score: newAway, status: 'f' })
+                    .eq('id', match.id);
+
+                if (error) {
+                    addLog(`Error Partido #${match.id}: ${error.message}`, 'error');
+                } else {
+                    matchOk++;
+                    // Recalculate points for THIS match for all users
+                    const { data: preds } = await supabaseAdmin.from('predictions').select('*').eq('match_id', match.id);
+                    if (preds) {
+                        for (const p of preds) {
+                            if (p.home_score === null || p.away_score === null) continue;
+                            let pts = 0;
+                            const pH = Number(p.home_score), pA = Number(p.away_score);
+                            const mH = Number(newHome), mA = Number(newAway);
+                            if (pH === mH && pA === mA) {
+                                pts = 8;
+                            } else if (Math.sign(mH - mA) === Math.sign(pH - pA)) {
+                                pts = 3;
+                            }
+                            if (pts !== p.points_earned) {
+                                await supabaseAdmin.from('predictions').update({ points_earned: pts }).eq('id', p.id);
+                            }
+                        }
+                    }
+                }
+                tick(`Partidos: ${matchOk}/${targetMatches.length}`);
+                await new Promise(r => setTimeout(r, 20));
+            }
+            addLog(`✓ ${matchOk}/${targetMatches.length} partidos simulados`, matchOk === targetMatches.length ? 'success' : 'warn');
+        }
+
+        // ── Step 3: Recalculate profile totals ───────────────────────
+        if (calcPoints) {
+            addLog('Recalculando puntos globales...', 'info');
+            setProgress(97, 'Recalculando puntos...');
+            await updateAllProfilesPoints();
+            tick('Puntos actualizados');
+            addLog('✓ Puntos y ranking actualizados', 'success');
+        }
+
+        // ── Finalize ─────────────────────────────────────────────────
+        setProgress(100, '¡Simulación completa!');
+        progressBar.classList.remove('progress-bar-shimmer');
+        progressBar.style.background = '#10b981';
+        addLog(`✅ Simulación finalizada. ${targetMatches.length} partidos · ${targetProfiles.length} usuarios.`, 'success');
+
+        // Refresh UI data
+        await loadMatches();
+        await loadUsers();
+        await calculateStandings();
+
+        runBtn.disabled = false;
+        runBtn.innerHTML = '<span class="material-icons text-sm">check_circle</span> Completado';
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = 'Cerrar';
+
+    } catch (err) {
+        console.error('[SIM] Error:', err);
+        addLog('Error crítico: ' + err.message, 'error');
+        setProgress(100, 'Error');
+        runBtn.disabled = false;
+        runBtn.innerHTML = '<span class="material-icons text-sm">play_arrow</span> Reintentar';
+        cancelBtn.disabled = false;
+    }
+};
+

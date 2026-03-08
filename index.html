@@ -95,6 +95,67 @@
                 transform: scale(1.1);
             }
         }
+
+        /* ── Champion Modal Animations ──────────────────── */
+        @keyframes wc-spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes wc-trophy-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 18px rgba(251, 191, 36, 0.5));
+            }
+
+            50% {
+                transform: scale(1.06);
+                filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.85));
+            }
+        }
+
+        @keyframes wc-sparkle {
+
+            0%,
+            100% {
+                opacity: 0;
+                transform: scale(0.4);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
+        @keyframes wc-flag-float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-6px);
+            }
+        }
+
+        @keyframes wc-text-shimmer {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 200% 50%;
+            }
+        }
     </style>
     <!-- Confetti Logic -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -658,7 +719,254 @@
             </div>
         </div>
 
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- WORLD CHAMPION MODAL (bracket — match 104 finished)        -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div id="world-champion-modal"
+            class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/90 backdrop-blur-lg hidden"
+            style="opacity:0; transition: opacity 0.4s ease;">
+            <!-- Star-burst rays background -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <div id="wc-rays" style="position:absolute;inset:0;
+                    background: conic-gradient(from 0deg, transparent 0deg, rgba(234,179,8,0.06) 10deg, transparent 20deg,
+                    rgba(234,179,8,0.04) 30deg, transparent 40deg, rgba(234,179,8,0.06) 50deg, transparent 60deg,
+                    rgba(234,179,8,0.04) 70deg, transparent 80deg, rgba(234,179,8,0.06) 90deg, transparent 100deg,
+                    rgba(234,179,8,0.04) 110deg, transparent 120deg, rgba(234,179,8,0.06) 130deg, transparent 140deg,
+                    rgba(234,179,8,0.04) 150deg, transparent 160deg, rgba(234,179,8,0.06) 170deg, transparent 180deg,
+                    rgba(234,179,8,0.04) 190deg, transparent 200deg, rgba(234,179,8,0.06) 210deg, transparent 220deg,
+                    rgba(234,179,8,0.04) 230deg, transparent 240deg, rgba(234,179,8,0.06) 250deg, transparent 260deg,
+                    rgba(234,179,8,0.04) 270deg, transparent 280deg, rgba(234,179,8,0.06) 290deg, transparent 300deg,
+                    rgba(234,179,8,0.04) 310deg, transparent 320deg, rgba(234,179,8,0.06) 330deg, transparent 340deg,
+                    rgba(234,179,8,0.04) 350deg, transparent 360deg);
+                    animation: wc-spin 18s linear infinite;"></div>
+            </div>
+
+            <!-- Card -->
+            <div id="world-champion-inner"
+                class="relative z-10 w-full max-w-sm mx-4 rounded-3xl overflow-hidden shadow-2xl" style="background: linear-gradient(145deg, #0f1a2e 0%, #1a2740 50%, #0f1a2e 100%);
+                        border: 1px solid rgba(234,179,8,0.4);
+                        transform: scale(0.85); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);">
+
+                <!-- Golden top band -->
+                <div style="background: linear-gradient(90deg, #92400e, #d97706, #fbbf24, #f59e0b, #d97706, #92400e);
+                            height:4px; width:100%;"></div>
+
+                <!-- Close -->
+                <button onclick="closeWorldChampionModal()"
+                    class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center z-20"
+                    style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1);">
+                    <span class="material-icons text-slate-400" style="font-size:16px;">close</span>
+                </button>
+
+                <div class="flex flex-col items-center px-8 pb-8 pt-6 text-center gap-4">
+                    <!-- Header label -->
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.25em] mb-0.5" style="color:#d97706;">Copa
+                            del Mundo FIFA 2026</p>
+                        <h2 class="text-2xl font-black text-white tracking-tight">¡Campeón del Mundo!</h2>
+                    </div>
+
+                    <!-- Trophy SVG (inline, no external dependency) -->
+                    <div id="wc-trophy-wrap" class="relative">
+                        <svg width="90" height="110" viewBox="0 0 90 110" fill="none" xmlns="http://www.w3.org/2000/svg"
+                            style="filter: drop-shadow(0 0 18px rgba(251,191,36,0.6)); animation: wc-trophy-pulse 2.2s ease-in-out infinite;">
+                            <!-- Cup body -->
+                            <path d="M30 8 L60 8 L65 55 Q65 75 45 80 Q25 75 25 55 Z" fill="url(#goldGrad)" />
+                            <!-- Handles -->
+                            <path d="M25 18 Q10 22 10 38 Q10 52 25 50" stroke="url(#goldGrad)" stroke-width="5"
+                                fill="none" stroke-linecap="round" />
+                            <path d="M65 18 Q80 22 80 38 Q80 52 65 50" stroke="url(#goldGrad)" stroke-width="5"
+                                fill="none" stroke-linecap="round" />
+                            <!-- Stem -->
+                            <rect x="38" y="80" width="14" height="18" rx="3" fill="url(#goldGrad2)" />
+                            <!-- Base -->
+                            <rect x="26" y="96" width="38" height="10" rx="5" fill="url(#goldGrad2)" />
+                            <!-- Star on cup -->
+                            <path
+                                d="M45 22 L47 29 L54 29 L48.5 33.5 L50.5 40.5 L45 36.5 L39.5 40.5 L41.5 33.5 L36 29 L43 29 Z"
+                                fill="rgba(255,255,255,0.85)" />
+                            <defs>
+                                <linearGradient id="goldGrad" x1="25" y1="8" x2="65" y2="90"
+                                    gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#fde68a" />
+                                    <stop offset="40%" stop-color="#f59e0b" />
+                                    <stop offset="70%" stop-color="#d97706" />
+                                    <stop offset="100%" stop-color="#fbbf24" />
+                                </linearGradient>
+                                <linearGradient id="goldGrad2" x1="26" y1="80" x2="64" y2="106"
+                                    gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#d97706" />
+                                    <stop offset="100%" stop-color="#92400e" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <!-- Sparkle dots -->
+                        <div style="position:absolute;top:-8px;right:-10px;width:10px;height:10px;border-radius:50%;
+                                    background:#fbbf24;animation:wc-sparkle 1.4s ease-in-out infinite;"></div>
+                        <div style="position:absolute;top:10px;left:-12px;width:6px;height:6px;border-radius:50%;
+                                    background:#fde68a;animation:wc-sparkle 1.8s ease-in-out infinite 0.4s;"></div>
+                        <div style="position:absolute;bottom:20px;right:-8px;width:8px;height:8px;border-radius:50%;
+                                    background:#f59e0b;animation:wc-sparkle 2s ease-in-out infinite 0.8s;"></div>
+                    </div>
+
+                    <!-- Champion flag + name -->
+                    <div class="flex flex-col items-center gap-3">
+                        <div class="relative">
+                            <img id="wc-champion-flag" src="https://flagcdn.com/w80/un.png" alt="Bandera"
+                                class="w-24 h-16 object-cover rounded-xl shadow-xl"
+                                style="border: 2px solid rgba(234,179,8,0.5);">
+                            <div style="position:absolute;inset:0;border-radius:12px;
+                                        background:linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.4));">
+                            </div>
+                        </div>
+                        <div>
+                            <p id="wc-champion-name" class="text-3xl font-black" style="background: linear-gradient(135deg, #fde68a, #f59e0b, #fbbf24);
+                                      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                                      background-clip: text;">
+                                — —
+                            </p>
+                            <p class="text-xs text-slate-500 mt-0.5" id="wc-match-score"></p>
+                        </div>
+                    </div>
+
+                    <!-- Close CTA -->
+                    <button onclick="closeWorldChampionModal()"
+                        class="w-full py-3 rounded-xl font-black text-sm mt-2 transition-all" style="background: linear-gradient(135deg, #d97706, #f59e0b);
+                               color: #0f1a2e; letter-spacing:0.05em; box-shadow: 0 6px 20px rgba(217,119,6,0.4);">
+                        ¡INCREÍBLE! 🏆
+                    </button>
+                </div>
+
+                <!-- Bottom band -->
+                <div style="background: linear-gradient(90deg, #92400e, #d97706, #fbbf24, #f59e0b, #d97706, #92400e);
+                            height:4px; width:100%;"></div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- QUINIELA CHAMPION MODAL (user login — tournament finished) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div id="quiniela-champion-modal"
+            class="fixed inset-0 z-[9997] flex items-center justify-center bg-black/90 backdrop-blur-lg hidden"
+            style="opacity:0; transition: opacity 0.4s ease;">
+
+            <!-- Rays bg -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <div style="position:absolute;inset:0;
+                    background: conic-gradient(from 0deg, transparent 0deg, rgba(16,183,72,0.05) 10deg, transparent 20deg,
+                    rgba(16,183,72,0.03) 30deg, transparent 40deg, rgba(16,183,72,0.05) 50deg, transparent 60deg,
+                    rgba(16,183,72,0.03) 70deg, transparent 80deg, rgba(16,183,72,0.05) 90deg, transparent 100deg,
+                    rgba(16,183,72,0.03) 110deg, transparent 120deg, rgba(16,183,72,0.05) 130deg, transparent 140deg,
+                    rgba(16,183,72,0.03) 150deg, transparent 160deg, rgba(16,183,72,0.05) 170deg, transparent 180deg,
+                    rgba(16,183,72,0.03) 190deg, transparent 200deg, rgba(16,183,72,0.05) 210deg, transparent 220deg,
+                    rgba(16,183,72,0.03) 230deg, transparent 240deg, rgba(16,183,72,0.05) 250deg, transparent 260deg,
+                    rgba(16,183,72,0.03) 270deg, transparent 280deg, rgba(16,183,72,0.05) 290deg, transparent 300deg,
+                    rgba(16,183,72,0.03) 310deg, transparent 320deg, rgba(16,183,72,0.05) 330deg, transparent 340deg,
+                    rgba(16,183,72,0.03) 350deg, transparent 360deg);
+                    animation: wc-spin 22s linear infinite reverse;"></div>
+            </div>
+
+            <!-- Card -->
+            <div id="quiniela-champion-inner"
+                class="relative z-10 w-full max-w-sm mx-4 rounded-3xl overflow-hidden shadow-2xl" style="background: linear-gradient(145deg, #0a1a12 0%, #0f2318 50%, #0a1a12 100%);
+                        border: 1px solid rgba(16,183,72,0.35);
+                        transform: scale(0.85); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);">
+
+                <div style="background: linear-gradient(90deg, #064e3b, #059669, #10b981, #059669, #064e3b);
+                            height:4px; width:100%;"></div>
+
+                <button onclick="closeQuinielaChampionModal()"
+                    class="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center z-20"
+                    style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1);">
+                    <span class="material-icons text-slate-400" style="font-size:16px;">close</span>
+                </button>
+
+                <div class="flex flex-col items-center px-8 pb-8 pt-6 text-center gap-4">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.25em] mb-0.5" style="color:#10b981;">
+                            Quiniela Mundialista 2026</p>
+                        <h2 class="text-2xl font-black text-white tracking-tight">🥇 ¡Campeón de la Quiniela!</h2>
+                    </div>
+
+                    <!-- Trophy + World Cup small flag -->
+                    <div class="flex items-center gap-4">
+                        <!-- Quiniela trophy -->
+                        <div class="relative">
+                            <svg width="60" height="72" viewBox="0 0 90 110" fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                style="filter: drop-shadow(0 0 12px rgba(16,183,72,0.7)); animation: wc-trophy-pulse 2s ease-in-out infinite;">
+                                <path d="M30 8 L60 8 L65 55 Q65 75 45 80 Q25 75 25 55 Z" fill="url(#greenGrad)" />
+                                <path d="M25 18 Q10 22 10 38 Q10 52 25 50" stroke="url(#greenGrad)" stroke-width="5"
+                                    fill="none" stroke-linecap="round" />
+                                <path d="M65 18 Q80 22 80 38 Q80 52 65 50" stroke="url(#greenGrad)" stroke-width="5"
+                                    fill="none" stroke-linecap="round" />
+                                <rect x="38" y="80" width="14" height="18" rx="3" fill="url(#greenGrad2)" />
+                                <rect x="26" y="96" width="38" height="10" rx="5" fill="url(#greenGrad2)" />
+                                <path
+                                    d="M45 22 L47 29 L54 29 L48.5 33.5 L50.5 40.5 L45 36.5 L39.5 40.5 L41.5 33.5 L36 29 L43 29 Z"
+                                    fill="rgba(255,255,255,0.9)" />
+                                <defs>
+                                    <linearGradient id="greenGrad" x1="25" y1="8" x2="65" y2="90"
+                                        gradientUnits="userSpaceOnUse">
+                                        <stop offset="0%" stop-color="#6ee7b7" />
+                                        <stop offset="50%" stop-color="#10b981" />
+                                        <stop offset="100%" stop-color="#059669" />
+                                    </linearGradient>
+                                    <linearGradient id="greenGrad2" x1="26" y1="80" x2="64" y2="106"
+                                        gradientUnits="userSpaceOnUse">
+                                        <stop offset="0%" stop-color="#059669" />
+                                        <stop offset="100%" stop-color="#064e3b" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+
+                        <!-- World Cup small note -->
+                        <div class="text-left">
+                            <p class="text-xs text-slate-500 mb-1">Campeón FIFA</p>
+                            <div class="flex items-center gap-2">
+                                <img id="qc-world-flag" src="https://flagcdn.com/w40/un.png"
+                                    class="w-7 h-5 object-cover rounded shadow" alt="Campeón mundial">
+                                <span id="qc-world-team" class="text-sm font-bold text-amber-400">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Winner avatar + name -->
+                    <div
+                        class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-2">
+                        <div class="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black text-white shadow-lg"
+                            id="qc-avatar" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            🏆
+                        </div>
+                        <p class="text-lg font-black text-white" id="qc-winner-name">—</p>
+                        <div class="flex items-center gap-4 text-sm">
+                            <div class="text-center">
+                                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">Puntos</p>
+                                <p class="text-xl font-black text-emerald-400" id="qc-winner-points">—</p>
+                            </div>
+                            <div class="w-px h-8 bg-white/10"></div>
+                            <div class="text-center">
+                                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">Exactos</p>
+                                <p class="text-xl font-black text-white" id="qc-winner-exacts">—</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="closeQuinielaChampionModal()"
+                        class="w-full py-3 rounded-xl font-black text-sm transition-all" style="background: linear-gradient(135deg, #059669, #10b981);
+                               color: white; box-shadow: 0 6px 20px rgba(16,183,72,0.35);">
+                        ¡Ver Ranking Completo! 🎉
+                    </button>
+                </div>
+
+                <div style="background: linear-gradient(90deg, #064e3b, #059669, #10b981, #059669, #064e3b);
+                            height:4px; width:100%;"></div>
+            </div>
+        </div>
+
         <!-- Bracket Modal (original above) -->
+
         <div id="bracket-modal-unused" class="hidden"
             style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; background-color: rgb(15, 23, 42); font-family: ui-sans-serif, system-ui, sans-serif;">
 
@@ -726,6 +1034,195 @@
         </div>
 
     </main>
+
+    <!-- ══════════  CHAMPION MODALS LOGIC  ══════════ -->
+    <script>
+        // ── Flag helper (mirrors app_bracket_ext.js) ──────────────────────────
+        const _flagMap = {
+            MEX: 'mx', BRA: 'br', ARG: 'ar', USA: 'us', CAN: 'ca', ESP: 'es', FRA: 'fr', GER: 'de',
+            ENG: 'gb', POR: 'pt', NED: 'nl', BEL: 'be', CRO: 'hr', URU: 'uy', KOR: 'kr', JPN: 'jp',
+            SEN: 'sn', MAR: 'ma', SUI: 'ch', GHA: 'gh', CMR: 'cm', ECU: 'ec', KSA: 'sa', IRN: 'ir',
+            AUS: 'au', CRC: 'cr', POL: 'pl', TUN: 'tn', DEN: 'dk', SRB: 'rs', WAL: 'gb-wls',
+            QAT: 'qa', RSA: 'za', PAR: 'py', SCO: 'gb-sct', CIV: 'ci', COL: 'co', ITA: 'it', PAN: 'pa'
+        };
+        const _nameMap = {
+            MEX: 'México', BRA: 'Brasil', ARG: 'Argentina', USA: 'EE.UU.', CAN: 'Canadá',
+            ESP: 'España', FRA: 'Francia', GER: 'Alemania', ENG: 'Inglaterra', POR: 'Portugal',
+            NED: 'Países Bajos', BEL: 'Bélgica', CRO: 'Croacia', URU: 'Uruguay', MAR: 'Marruecos',
+            JPN: 'Japón', KOR: 'Corea del Sur', SEN: 'Senegal', SUI: 'Suiza', POL: 'Polonia',
+            AUS: 'Australia', ITA: 'Italia', ECU: 'Ecuador', QAT: 'Qatar', IRN: 'Irán',
+            KSA: 'Arabia Saudita', GHA: 'Ghana', CMR: 'Camerún', TUN: 'Túnez', SRB: 'Serbia',
+            DEN: 'Dinamarca', COL: 'Colombia', PAN: 'Panamá', CRC: 'Costa Rica'
+        };
+        function _getFlagUrl(code) {
+            if (!code || /^[WL]/.test(code)) return 'https://flagcdn.com/w80/un.png';
+            return 'https://flagcdn.com/w80/' + (_flagMap[code] || 'un') + '.png';
+        }
+        function _getTeamName(code) { return _nameMap[code] || code || 'TBD'; }
+
+        // Resolve W104/L104-style codes using global window.matches
+        function _resolveCode(code) {
+            if (!code) return null;
+            var s = String(code);
+            if (s[0] !== 'W' && s[0] !== 'L') return code;
+            var isW = s[0] === 'W';
+            var mid = parseInt(s.slice(1), 10);
+            if (isNaN(mid)) return code;
+            var ms = window.matches || [];
+            for (var i = 0; i < ms.length; i++) {
+                var m = ms[i];
+                if (+m.id === mid && m.status === 'f') {
+                    var winner, loser;
+                    if (m.penalty_winner) {
+                        winner = m.penalty_winner === 'home' ? m.home_team : m.away_team;
+                        loser = m.penalty_winner === 'home' ? m.away_team : m.home_team;
+                    } else if (m.home_score != null && m.away_score != null) {
+                        if (+m.home_score > +m.away_score) { winner = m.home_team; loser = m.away_team; }
+                        else if (+m.away_score > +m.home_score) { winner = m.away_team; loser = m.home_team; }
+                    }
+                    return _resolveCode(isW ? winner : loser);
+                }
+            }
+            return code;
+        }
+
+        // ── Confetti / Fireworks helpers ──────────────────────────────────────
+        function _launchFireworks() {
+            if (typeof confetti === 'undefined') return;
+            var end = Date.now() + 4500;
+            (function burst() {
+                confetti({
+                    particleCount: 60, spread: 70, origin: { x: Math.random(), y: Math.random() * 0.5 },
+                    colors: ['#fbbf24', '#f59e0b', '#fde68a', '#ffffff', '#ef4444', '#3b82f6', '#10b981']
+                });
+                if (Date.now() < end) setTimeout(burst, 150);
+            })();
+            // Side cannons (serpentinas)
+            setTimeout(function () {
+                confetti({
+                    particleCount: 130, angle: 60, spread: 55, origin: { x: 0, y: 0.65 },
+                    colors: ['#fbbf24', '#ef4444', '#3b82f6', '#10b981', '#a855f7', '#ec4899']
+                });
+                confetti({
+                    particleCount: 130, angle: 120, spread: 55, origin: { x: 1, y: 0.65 },
+                    colors: ['#fbbf24', '#ef4444', '#3b82f6', '#10b981', '#a855f7', '#ec4899']
+                });
+            }, 300);
+            // Extra rain at peak
+            setTimeout(function () {
+                confetti({
+                    particleCount: 200, spread: 160, startVelocity: 45,
+                    origin: { x: 0.5, y: 0 },
+                    colors: ['#fbbf24', '#f59e0b', '#ffffff', '#ef4444', '#3b82f6']
+                });
+            }, 1200);
+        }
+
+        function _launchGreenFireworks() {
+            if (typeof confetti === 'undefined') return;
+            var end = Date.now() + 3800;
+            (function burst() {
+                confetti({
+                    particleCount: 50, spread: 65, origin: { x: Math.random(), y: Math.random() * 0.5 },
+                    colors: ['#10b981', '#6ee7b7', '#059669', '#ffffff', '#fbbf24', '#a7f3d0']
+                });
+                if (Date.now() < end) setTimeout(burst, 180);
+            })();
+            setTimeout(function () {
+                confetti({
+                    particleCount: 110, angle: 60, spread: 55, origin: { x: 0, y: 0.65 },
+                    colors: ['#10b981', '#059669', '#fbbf24', '#ffffff']
+                });
+                confetti({
+                    particleCount: 110, angle: 120, spread: 55, origin: { x: 1, y: 0.65 },
+                    colors: ['#10b981', '#059669', '#fbbf24', '#ffffff']
+                });
+            }, 250);
+        }
+
+        // ── WORLD CHAMPION MODAL ──────────────────────────────────────────────
+        window.showWorldChampionModal = function (match) {
+            var homeCode = _resolveCode(match.home_team);
+            var awayCode = _resolveCode(match.away_team);
+            var winner = null;
+            if (match.penalty_winner) {
+                winner = match.penalty_winner === 'home' ? homeCode : awayCode;
+            } else if (match.home_score != null && match.away_score != null) {
+                if (+match.home_score > +match.away_score) winner = homeCode;
+                else if (+match.away_score > +match.home_score) winner = awayCode;
+            }
+            if (!winner || /^[WL]/.test(winner)) return; // teams not yet resolved
+
+            document.getElementById('wc-champion-flag').src = _getFlagUrl(winner);
+            document.getElementById('wc-champion-name').textContent = _getTeamName(winner);
+            var hs = match.home_score != null ? match.home_score : '-';
+            var as_ = match.away_score != null ? match.away_score : '-';
+            var penNote = match.penalty_winner ? ' (Pen.)' : '';
+            document.getElementById('wc-match-score').textContent =
+                _getTeamName(homeCode) + ' ' + hs + ' \u2013 ' + as_ + ' ' + _getTeamName(awayCode) + penNote;
+
+            var modal = document.getElementById('world-champion-modal');
+            var inner = document.getElementById('world-champion-inner');
+            modal.classList.remove('hidden');
+            requestAnimationFrame(function () {
+                modal.style.opacity = '1';
+                inner.style.transform = 'scale(1)';
+            });
+            document.body.style.overflow = 'hidden';
+            setTimeout(_launchFireworks, 450);
+        };
+
+        window.closeWorldChampionModal = function () {
+            var modal = document.getElementById('world-champion-modal');
+            var inner = document.getElementById('world-champion-inner');
+            modal.style.opacity = '0';
+            inner.style.transform = 'scale(0.88)';
+            setTimeout(function () {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }, 420);
+        };
+
+        // ── QUINIELA CHAMPION MODAL ───────────────────────────────────────────
+        window.showQuinielaChampionModal = function (opts) {
+            // opts: { winnerName, points, exactCount, worldChampTeam }
+            var initials = (opts.winnerName || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+            var avatarEl = document.getElementById('qc-avatar');
+            avatarEl.textContent = initials || '🏆';
+
+            document.getElementById('qc-winner-name').textContent = opts.winnerName || '—';
+            document.getElementById('qc-winner-points').textContent = opts.points != null ? opts.points + ' pts' : '—';
+            document.getElementById('qc-winner-exacts').textContent = opts.exactCount != null ? opts.exactCount + ' exactos' : '—';
+
+            var worldCode = opts.worldChampTeam || null;
+            if (worldCode) {
+                document.getElementById('qc-world-flag').src = _getFlagUrl(worldCode);
+                document.getElementById('qc-world-team').textContent = _getTeamName(worldCode);
+            }
+
+            var modal = document.getElementById('quiniela-champion-modal');
+            var inner = document.getElementById('quiniela-champion-inner');
+            modal.classList.remove('hidden');
+            requestAnimationFrame(function () {
+                modal.style.opacity = '1';
+                inner.style.transform = 'scale(1)';
+            });
+            document.body.style.overflow = 'hidden';
+            setTimeout(_launchGreenFireworks, 450);
+        };
+
+        window.closeQuinielaChampionModal = function () {
+            var modal = document.getElementById('quiniela-champion-modal');
+            var inner = document.getElementById('quiniela-champion-inner');
+            modal.style.opacity = '0';
+            inner.style.transform = 'scale(0.88)';
+            setTimeout(function () {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }, 420);
+        };
+    </script>
+
 </body>
 
 </html>

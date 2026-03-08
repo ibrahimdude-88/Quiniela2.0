@@ -331,10 +331,10 @@
                         Crear 10 Usuarios (J1-J3)
                     </button>
 
-                    <button onclick="simulateGroupStageResults()"
+                    <button onclick="openSimulateModal()"
                         class="w-full py-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/50 text-blue-300 font-bold transition-all flex items-center justify-center gap-2 group">
                         <span class="material-icons group-hover:scale-110 transition-transform">sports_score</span>
-                        Simular Resultados (J1-J3)
+                        Simular Resultados
                     </button>
 
                     <button onclick="resetApp()"
@@ -352,6 +352,221 @@
                         class="w-full py-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-400 font-bold transition-all flex items-center justify-center gap-2 group">
                         <span class="material-icons group-hover:scale-110 transition-transform">delete_forever</span>
                         Eliminar Pronósticos
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulate Results Modal -->
+        <div id="simulate-modal"
+            class="fixed inset-0 z-[150] flex items-center justify-center bg-black/75 backdrop-blur-md hidden"
+            style="opacity:0; transition: opacity 0.2s ease;">
+            <div id="simulate-modal-inner"
+                class="bg-[#0f1623] w-full max-w-lg mx-4 rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+                style="transform:scale(0.93); transition:transform 0.2s ease; max-height:90vh;">
+
+                <!-- Header -->
+                <div class="px-6 pt-5 pb-4 border-b border-white/5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                            <span class="material-icons text-blue-400">sports_score</span>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Pruebas y
+                                Mantenimiento</p>
+                            <h3 class="text-base font-black text-white">Configurar Simulación</h3>
+                        </div>
+                    </div>
+                    <button onclick="closeSimulateModal()"
+                        class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+                        <span class="material-icons text-sm">close</span>
+                    </button>
+                </div>
+
+                <!-- Body -->
+                <div class="px-6 py-5 space-y-5 overflow-y-auto custom-scrollbar flex-1">
+
+                    <!-- Jornadas / Fases -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                            <span class="material-icons text-xs align-middle mr-1">event</span>
+                            Jornadas / Fases a simular
+                        </label>
+                        <div class="grid grid-cols-2 gap-2" id="sim-matchday-checks">
+                            <!-- Group Stage -->
+                            <label
+                                class="sim-check-label flex items-center gap-2 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-blue-500/40 transition-all">
+                                <input type="checkbox" value="1" class="sim-md-check w-4 h-4 rounded accent-blue-500"
+                                    checked>
+                                <span class="text-sm font-bold text-white">Jornada 1</span>
+                                <span class="ml-auto text-[10px] text-slate-500">Grupos</span>
+                            </label>
+                            <label
+                                class="sim-check-label flex items-center gap-2 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-blue-500/40 transition-all">
+                                <input type="checkbox" value="2" class="sim-md-check w-4 h-4 rounded accent-blue-500"
+                                    checked>
+                                <span class="text-sm font-bold text-white">Jornada 2</span>
+                                <span class="ml-auto text-[10px] text-slate-500">Grupos</span>
+                            </label>
+                            <label
+                                class="sim-check-label flex items-center gap-2 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-blue-500/40 transition-all">
+                                <input type="checkbox" value="3" class="sim-md-check w-4 h-4 rounded accent-blue-500"
+                                    checked>
+                                <span class="text-sm font-bold text-white">Jornada 3</span>
+                                <span class="ml-auto text-[10px] text-slate-500">Grupos</span>
+                            </label>
+                            <!-- Knockout -->
+                            <label
+                                class="sim-check-label flex items-center gap-2 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-indigo-500/40 transition-all">
+                                <input type="checkbox" value="4" class="sim-md-check w-4 h-4 rounded accent-indigo-500">
+                                <span class="text-sm font-bold text-white">16vos</span>
+                                <span class="ml-auto text-[10px] text-slate-500">Eliminatoria</span>
+                            </label>
+                            <label
+                                class="sim-check-label flex items-center gap-2 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-indigo-500/40 transition-all">
+                                <input type="checkbox" value="5" class="sim-md-check w-4 h-4 rounded accent-indigo-500">
+                                <span class="text-sm font-bold text-white">Octavos</span>
+                                <span class="ml-auto text-[10px] text-slate-500">Eliminatoria</span>
+                            </label>
+                            <label
+                                class="sim-check-label flex items-center gap-2 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-indigo-500/40 transition-all">
+                                <input type="checkbox" value="6" class="sim-md-check w-4 h-4 rounded accent-indigo-500">
+                                <span class="text-sm font-bold text-white">Cuartos</span>
+                                <span class="ml-auto text-[10px] text-slate-500">Eliminatoria</span>
+                            </label>
+                            <label
+                                class="sim-check-label flex items-center gap-2 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-indigo-500/40 transition-all">
+                                <input type="checkbox" value="7" class="sim-md-check w-4 h-4 rounded accent-indigo-500">
+                                <span class="text-sm font-bold text-white">Semifinales</span>
+                                <span class="ml-auto text-[10px] text-slate-500">Eliminatoria</span>
+                            </label>
+                            <label
+                                class="sim-check-label flex items-center gap-2 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-indigo-500/40 transition-all">
+                                <input type="checkbox" value="8" class="sim-md-check w-4 h-4 rounded accent-indigo-500">
+                                <span class="text-sm font-bold text-white">Final y 3er</span>
+                                <span class="ml-auto text-[10px] text-slate-500">Eliminatoria</span>
+                            </label>
+                        </div>
+                        <div class="flex gap-2 mt-2">
+                            <button onclick="document.querySelectorAll('.sim-md-check').forEach(c=>c.checked=true)"
+                                class="text-[10px] text-blue-400 hover:text-blue-300 font-bold">Seleccionar
+                                todo</button>
+                            <span class="text-slate-600">·</span>
+                            <button onclick="document.querySelectorAll('.sim-md-check').forEach(c=>c.checked=false)"
+                                class="text-[10px] text-slate-500 hover:text-slate-300 font-bold">Limpiar</button>
+                        </div>
+                    </div>
+
+                    <!-- Usuarios -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                            <span class="material-icons text-xs align-middle mr-1">group</span>
+                            Usuarios objetivo
+                        </label>
+                        <div class="space-y-2">
+                            <label
+                                class="flex items-center gap-3 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-blue-500/40 transition-all">
+                                <input type="radio" name="sim-user-target" value="all" class="w-4 h-4 accent-blue-500"
+                                    checked>
+                                <div>
+                                    <p class="text-sm font-bold text-white">Todos los usuarios</p>
+                                    <p class="text-[10px] text-slate-500">Genera predicciones para cada perfil
+                                        registrado</p>
+                                </div>
+                            </label>
+                            <label
+                                class="flex items-center gap-3 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-blue-500/40 transition-all">
+                                <input type="radio" name="sim-user-target" value="test" class="w-4 h-4 accent-blue-500">
+                                <div>
+                                    <p class="text-sm font-bold text-white">Solo usuarios de prueba</p>
+                                    <p class="text-[10px] text-slate-500">Únicamente perfiles marcados como TEST</p>
+                                </div>
+                            </label>
+                            <label
+                                class="flex items-center gap-3 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer hover:border-blue-500/40 transition-all"
+                                id="sim-specific-wrap">
+                                <input type="radio" name="sim-user-target" value="specific"
+                                    class="w-4 h-4 accent-blue-500" onchange="toggleSimUserList(this.checked)">
+                                <div>
+                                    <p class="text-sm font-bold text-white">Usuarios específicos</p>
+                                    <p class="text-[10px] text-slate-500">Elige uno o más de la lista</p>
+                                </div>
+                            </label>
+                            <!-- User list (hidden until specific is selected) -->
+                            <div id="sim-user-list"
+                                class="hidden ml-7 bg-black/20 rounded-lg border border-white/5 p-2 max-h-32 overflow-y-auto custom-scrollbar">
+                                <p class="text-[10px] text-slate-500 px-1 mb-1">Cargando usuarios...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Opciones adicionales -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                            <span class="material-icons text-xs align-middle mr-1">tune</span>
+                            Opciones adicionales
+                        </label>
+                        <div class="space-y-2">
+                            <label
+                                class="flex items-center gap-3 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer">
+                                <input type="checkbox" id="sim-gen-predictions" class="w-4 h-4 rounded accent-blue-500"
+                                    checked>
+                                <div>
+                                    <p class="text-sm font-bold text-white">Generar predicciones aleatorias</p>
+                                    <p class="text-[10px] text-slate-500">Crea pronósticos para los usuarios
+                                        seleccionados</p>
+                                </div>
+                            </label>
+                            <label
+                                class="flex items-center gap-3 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer">
+                                <input type="checkbox" id="sim-set-results" class="w-4 h-4 rounded accent-blue-500"
+                                    checked>
+                                <div>
+                                    <p class="text-sm font-bold text-white">Simular resultados de partidos</p>
+                                    <p class="text-[10px] text-slate-500">Asigna marcadores aleatorios y marca como
+                                        FINAL</p>
+                                </div>
+                            </label>
+                            <label
+                                class="flex items-center gap-3 bg-background-dark px-3 py-2.5 rounded-lg border border-white/5 cursor-pointer">
+                                <input type="checkbox" id="sim-calc-points" class="w-4 h-4 rounded accent-blue-500"
+                                    checked>
+                                <div>
+                                    <p class="text-sm font-bold text-white">Recalcular puntos</p>
+                                    <p class="text-[10px] text-slate-500">Actualiza puntos ganados y ranking al
+                                        finalizar</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Progress bar (hidden until running) -->
+                    <div id="sim-progress-wrap" class="hidden">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-xs font-bold text-slate-400" id="sim-progress-label">Procesando...</span>
+                            <span class="text-xs font-bold text-blue-400" id="sim-progress-pct">0%</span>
+                        </div>
+                        <div class="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                            <div id="sim-progress-bar"
+                                class="h-full rounded-full progress-bar-shimmer transition-all duration-400"
+                                style="width:0%"></div>
+                        </div>
+                        <div id="sim-log" class="mt-2 space-y-1 max-h-28 overflow-y-auto custom-scrollbar text-xs">
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="px-6 py-4 border-t border-white/5 flex gap-3">
+                    <button onclick="closeSimulateModal()" id="sim-cancel-btn"
+                        class="flex-1 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 font-bold transition-all">
+                        Cancelar
+                    </button>
+                    <button onclick="runSimulation()" id="sim-run-btn"
+                        class="flex-1 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-white font-bold transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
+                        <span class="material-icons text-sm">play_arrow</span>
+                        Ejecutar Simulación
                     </button>
                 </div>
             </div>

@@ -832,7 +832,40 @@ async function loadRanking() {
     `}).join('');
 
     console.log('[RANKING] Ranking loaded');
+
+    // ── Quiniela Champion Modal ──────────────────────────────────────
+    // Show once per session if the final (match 104) is finished
+    if (!window._quinielaChampModalShown && paidProfiles.length > 0) {
+        const finalMatch = matches.find(m => +m.id === 104 && m.status === 'f');
+        if (finalMatch) {
+            window._quinielaChampModalShown = true;
+            const leader = paidProfiles[0]; // already sorted by points desc
+
+            // Determine world champion team code
+            let worldChampCode = null;
+            const hCode = finalMatch.home_team;
+            const aCode = finalMatch.away_team;
+            if (finalMatch.penalty_winner) {
+                worldChampCode = finalMatch.penalty_winner === 'home' ? hCode : aCode;
+            } else if (finalMatch.home_score != null && finalMatch.away_score != null) {
+                if (+finalMatch.home_score > +finalMatch.away_score) worldChampCode = hCode;
+                else if (+finalMatch.away_score > +finalMatch.home_score) worldChampCode = aCode;
+            }
+
+            setTimeout(() => {
+                if (typeof window.showQuinielaChampionModal === 'function') {
+                    window.showQuinielaChampionModal({
+                        winnerName: leader.username || leader.full_name || 'Campeón',
+                        points: leader.points || 0,
+                        exactCount: leader.exact_score_count || 0,
+                        worldChampTeam: worldChampCode
+                    });
+                }
+            }, 1800); // delay so page finishes rendering first
+        }
+    }
 }
+
 
 // UI Toggles
 window.toggleAchievements = () => {
