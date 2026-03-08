@@ -57,6 +57,47 @@ let selectedThirdPlaceCandidate = null;
 let selectedQualifiedToRemove = null;
 let allGroupStandings = {};
 
+/**
+ * Converts any team/placeholder code into a user-friendly Spanish label.
+ *  - Real team codes  -> team name from TEAM_NAMES (e.g. 'MEX' -> 'México')
+ *  - '3AEHIJ'         -> '3er Lugar (Grp. A/E/H/I/J)'
+ *  - 'W73'            -> 'Ganador Partido #73'
+ *  - 'L101'           -> 'Perdedor Partido #101'
+ *  - 'TBD'            -> 'Por definir'
+ *  - Unknown          -> the code itself
+ */
+function friendlyTeamLabel(code) {
+    if (!code) return 'Por definir';
+    if (code === 'TBD') return 'Por definir';
+    // Real team
+    if (TEAM_NAMES[code]) return TEAM_NAMES[code];
+    // Playoff / repechaje slots
+    const playoffNames = {
+        'UEFA1': 'Repechaje UEFA 1', 'UEFA2': 'Repechaje UEFA 2',
+        'UEFA3': 'Repechaje UEFA 3', 'UEFA4': 'Repechaje UEFA 4',
+        'IC1': 'Repechaje IC 1', 'IC2': 'Repechaje IC 2', 'CPV': 'Repechaje CPV'
+    };
+    if (playoffNames[code]) return playoffNames[code];
+    // 3rd-place placeholder: '3ABCDF' -> '3er Lugar (Grp. A/B/C/D/F)'
+    if (/^3[A-L]{2,}$/.test(code)) {
+        const groups = code.substring(1).split('').join('/');
+        return `3er Lugar (Grp. ${groups})`;
+    }
+    // Winner/Loser: 'W73' -> 'Ganador #73', 'L101' -> 'Perdedor #101'
+    const wl = code.match(/^([WL])(\d+)$/);
+    if (wl) {
+        return `${wl[1] === 'W' ? 'Ganador' : 'Perdedor'} Partido #${wl[2]}`;
+    }
+    // Group-position shorthand: '1A' -> '1° Grupo A', '2B' -> '2° Grupo B'
+    const gp = code.match(/^(\d)([A-L])$/);
+    if (gp) {
+        const ord = { '1': '1°', '2': '2°', '3': '3°' };
+        return `${ord[gp[1]] || gp[1]}º Grupo ${gp[2]}`;
+    }
+    return code; // fallback
+}
+
+
 // Initialize
 async function init() {
     const isAdmin = await checkAdmin();
@@ -278,29 +319,29 @@ function renderMatchesTable() {
             if (!qualifiedList.includes(match.away_team)) qualifiedList.push(match.away_team);
 
             availableTeamsHtml = qualifiedList.map(code =>
-                `<option value="${code}">${TEAM_NAMES[code] || code}</option>`
+                `<option value="${code}">${friendlyTeamLabel(code)}</option>`
             ).join('');
         }
 
         const homeTeamRender = isKnockout
             ? `
-                <select onchange="updateMatchTeam(${match.id}, 'home', this.value)" class="bg-background-dark border border-white/10 rounded px-1 py-1 text-xs text-white max-w-[100px]">
-                    <option value="TBD" ${match.home_team === 'TBD' ? 'selected' : ''}>TBD</option>
+                <select onchange="updateMatchTeam(${match.id}, 'home', this.value)" class="bg-background-dark border border-white/10 rounded px-1 py-1 text-xs text-white max-w-[120px]">
+                    <option value="TBD" ${match.home_team === 'TBD' ? 'selected' : ''}>Por definir</option>
                     ${availableTeamsHtml.replace(`value="${match.home_team}"`, `value="${match.home_team}" selected`)}
                 </select>
             `
-            : `<span class="text-sm font-bold text-white text-right hidden md:inline">${match.home_team}</span>
-               <span class="text-xs font-bold text-white md:hidden">${match.home_team.substring(0, 3)}</span>`;
+            : `<span class="text-sm font-bold text-white text-right hidden md:inline">${friendlyTeamLabel(match.home_team)}</span>
+               <span class="text-xs font-bold text-white md:hidden">${(TEAM_NAMES[match.home_team] || match.home_team || '').substring(0, 3)}</span>`;
 
         const awayTeamRender = isKnockout
             ? `
-                <select onchange="updateMatchTeam(${match.id}, 'away', this.value)" class="bg-background-dark border border-white/10 rounded px-1 py-1 text-xs text-white max-w-[100px]">
-                     <option value="TBD" ${match.away_team === 'TBD' ? 'selected' : ''}>TBD</option>
+                <select onchange="updateMatchTeam(${match.id}, 'away', this.value)" class="bg-background-dark border border-white/10 rounded px-1 py-1 text-xs text-white max-w-[120px]">
+                     <option value="TBD" ${match.away_team === 'TBD' ? 'selected' : ''}>Por definir</option>
                     ${availableTeamsHtml.replace(`value="${match.away_team}"`, `value="${match.away_team}" selected`)}
                 </select>
             `
-            : `<span class="text-sm font-bold text-white hidden md:inline">${match.away_team}</span>
-               <span class="text-xs font-bold text-white md:hidden">${match.away_team.substring(0, 3)}</span>`;
+            : `<span class="text-sm font-bold text-white hidden md:inline">${friendlyTeamLabel(match.away_team)}</span>
+               <span class="text-xs font-bold text-white md:hidden">${(TEAM_NAMES[match.away_team] || match.away_team || '').substring(0, 3)}</span>`;
 
 
 
@@ -1804,7 +1845,7 @@ async function renderBracketEditor() {
             }
 
             const placeholderOptions = placeholders.map(p =>
-                `<option value="${p}" ${p === currentValue ? 'selected' : ''}>${p}</option>`
+                `<option value="${p}" ${p === currentValue ? 'selected' : ''}>${friendlyTeamLabel(p)}</option>`
             ).join('');
 
             return `
