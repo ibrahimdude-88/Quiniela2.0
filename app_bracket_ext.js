@@ -178,14 +178,16 @@
         trophy.innerHTML = '<span class="material-icons" style="color:#eab308;font-size:32px;display:block;">emoji_events</span><div style="color:#eab308;font-size:10px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;">Gran Final</div>';
 
         center.appendChild(trophy);
-        center.appendChild(_makeCard(final, true));
+        // Final: home=winner of SF1 (101), away=winner of SF2 (102)
+        center.appendChild(_makeCard(final, true, 'W101', 'W102'));
 
         if (third) {
             var thirdLabel = document.createElement('div');
             thirdLabel.style.cssText = 'color:#475569;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-top:12px;';
             thirdLabel.textContent = 'Tercer Lugar';
             center.appendChild(thirdLabel);
-            center.appendChild(_makeCard(third, false));
+            // Third place: loser of SF1 (101), loser of SF2 (102)
+            center.appendChild(_makeCard(third, false, 'L101', 'L102'));
         }
 
         container.appendChild(center);
@@ -256,8 +258,10 @@
         var stump = document.createElement('div');
         stump.style.cssText = 'width:12px;height:1px;background:rgba(255,255,255,0.12);flex-shrink:0;';
 
-        // Card
-        var card = _makeCard(match, false);
+        // Card — pass struct source codes as fallback for null DB fields
+        var card = _makeCard(match, false,
+            hSrc ? 'W' + hSrc : null,
+            aSrc ? 'W' + aSrc : null);
 
         // Row layout:
         //  LEFT:  [children-col] [conn] [stump] [card]   → card closest to center (right)
@@ -319,15 +323,20 @@
     }
 
     // ── Card ─────────────────────────────────────────────────────
-    function _makeCard(match, large) {
+    // hFallback / aFallback: W/L code to use when DB field is null (from struct)
+    function _makeCard(match, large, hFallback, aFallback) {
         var fin = match.status === 'f';
         var live = match.status === 'a';
         var hs = match.home_score != null ? match.home_score : '-';
         var as_ = match.away_score != null ? match.away_score : '-';
 
-        // Resolve W-codes to real team codes (winner of source match)
-        var homeTeam = _resolveTeam(match.home_team) || match.home_team;
-        var awayTeam = _resolveTeam(match.away_team) || match.away_team;
+        // Use DB field first; if null/empty, fall back to struct-derived W/L code
+        var homeRaw = (match.home_team && String(match.home_team).trim()) ? match.home_team : (hFallback || null);
+        var awayRaw = (match.away_team && String(match.away_team).trim()) ? match.away_team : (aFallback || null);
+
+        // Resolve W/L codes → real team codes (winner/loser of source match)
+        var homeTeam = _resolveTeam(homeRaw) || homeRaw;
+        var awayTeam = _resolveTeam(awayRaw) || awayRaw;
 
         var hc = '#94a3b8', ac = '#94a3b8';
         if (fin) {
@@ -405,19 +414,29 @@
     }
 
     function _name(code) {
-        if (!code) return 'TBD';
+        if (!code) return 'Pendiente';
+        var s = String(code).trim();
+        if (!s) return 'Pendiente';
+        // Friendly labels for unresolved W/L codes instead of raw "W97" or "TBD"
+        var wMatch = s.match(/^W(\d+)$/);
+        if (wMatch) return 'Gan. #' + wMatch[1];
+        var lMatch = s.match(/^L(\d+)$/);
+        if (lMatch) return 'Per. #' + lMatch[1];
         var map = {
             MEX: 'México', BRA: 'Brasil', ARG: 'Argentina', USA: 'EE.UU.', CAN: 'Canadá',
             ESP: 'España', FRA: 'Francia', GER: 'Alemania', ENG: 'Inglaterra', POR: 'Portugal',
             NED: 'Países Bajos', BEL: 'Bélgica', CRO: 'Croacia', URU: 'Uruguay', MAR: 'Marruecos',
-            JPN: 'Japón', KOR: 'Corea', SEN: 'Senegal', SUI: 'Suiza', POL: 'Polonia', AUS: 'Australia',
-            ITA: 'Italia', ECU: 'Ecuador', QAT: 'Qatar', IRN: 'Irán', KSA: 'Arabia S.',
-            GHA: 'Ghana', CMR: 'Camerún', TUN: 'Túnez', SRB: 'Serbia', DEN: 'Dinamarca',
-            COL: 'Colombia', PAN: 'Panamá', CRC: 'Costa Rica'
+            JPN: 'Japón', KOR: 'Corea del Sur', SEN: 'Senegal', SUI: 'Suiza', POL: 'Polonia',
+            AUS: 'Australia', ITA: 'Italia', ECU: 'Ecuador', QAT: 'Qatar', IRN: 'Irán',
+            KSA: 'Arabia S.', GHA: 'Ghana', CMR: 'Camerún', TUN: 'Túnez', SRB: 'Serbia',
+            DEN: 'Dinamarca', COL: 'Colombia', PAN: 'Panamá', CRC: 'Costa Rica',
+            WAL: 'Gales', RSA: 'Sudáfrica', PAR: 'Paraguay', SCO: 'Escocia',
+            CIV: 'Costa de Marfil', AUT: 'Austria', ALG: 'Argelia', BOL: 'Bolivia',
+            VEN: 'Venezuela', CHI: 'Chile', PER: 'Perú', NZL: 'Nueva Zelanda',
+            EGY: 'Egipto', UZB: 'Uzbekistán', HAI: 'Haití', CPV: 'Cabo Verde',
+            CUR: 'Curazao', NOR: 'Noruega', JOR: 'Jordania'
         };
-        var s = String(code);
-        if (/^[WL]\d/.test(s)) return s;
-        return map[code] || code;
+        return map[s] || s;
     }
 
     function _flag(code) {
