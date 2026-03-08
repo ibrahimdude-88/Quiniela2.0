@@ -1087,58 +1087,107 @@
         }
 
         // ── Confetti / Fireworks helpers ──────────────────────────────────────
+        // Creates (or reuses) a canvas that always sits above every modal overlay
+        function _getConfettiCanvas() {
+            var existing = document.getElementById('confetti-canvas-overlay');
+            if (existing) return existing;
+            var c = document.createElement('canvas');
+            c.id = 'confetti-canvas-overlay';
+            c.style.cssText = [
+                'position:fixed', 'inset:0', 'width:100%', 'height:100%',
+                'pointer-events:none', 'z-index:99999'
+            ].join(';');
+            document.body.appendChild(c);
+            return c;
+        }
+
         function _launchFireworks() {
-            if (typeof confetti === 'undefined') return;
+            if (typeof confetti === 'undefined') {
+                // canvas-confetti CDN might still be loading — retry once
+                return setTimeout(_launchFireworks, 400);
+            }
+            var myConfetti = confetti.create(_getConfettiCanvas(), { resize: true, useWorker: false });
+
             var end = Date.now() + 4500;
             (function burst() {
-                confetti({
-                    particleCount: 60, spread: 70, origin: { x: Math.random(), y: Math.random() * 0.5 },
+                myConfetti({
+                    particleCount: 60, spread: 70,
+                    origin: { x: Math.random(), y: Math.random() * 0.5 },
                     colors: ['#fbbf24', '#f59e0b', '#fde68a', '#ffffff', '#ef4444', '#3b82f6', '#10b981']
                 });
                 if (Date.now() < end) setTimeout(burst, 150);
             })();
+
             // Side cannons (serpentinas)
             setTimeout(function () {
-                confetti({
+                myConfetti({
                     particleCount: 130, angle: 60, spread: 55, origin: { x: 0, y: 0.65 },
                     colors: ['#fbbf24', '#ef4444', '#3b82f6', '#10b981', '#a855f7', '#ec4899']
                 });
-                confetti({
+                myConfetti({
                     particleCount: 130, angle: 120, spread: 55, origin: { x: 1, y: 0.65 },
                     colors: ['#fbbf24', '#ef4444', '#3b82f6', '#10b981', '#a855f7', '#ec4899']
                 });
             }, 300);
-            // Extra rain at peak
+
+            // Central rain at peak
             setTimeout(function () {
-                confetti({
+                myConfetti({
                     particleCount: 200, spread: 160, startVelocity: 45,
                     origin: { x: 0.5, y: 0 },
                     colors: ['#fbbf24', '#f59e0b', '#ffffff', '#ef4444', '#3b82f6']
                 });
             }, 1200);
+
+            // Repeat burst after 2 s
+            setTimeout(function () {
+                myConfetti({
+                    particleCount: 80, angle: 70, spread: 60, origin: { x: 0.2, y: 0.6 },
+                    colors: ['#fbbf24', '#ffffff', '#ef4444']
+                });
+                myConfetti({
+                    particleCount: 80, angle: 110, spread: 60, origin: { x: 0.8, y: 0.6 },
+                    colors: ['#fbbf24', '#ffffff', '#3b82f6']
+                });
+            }, 2200);
         }
 
         function _launchGreenFireworks() {
-            if (typeof confetti === 'undefined') return;
+            if (typeof confetti === 'undefined') {
+                return setTimeout(_launchGreenFireworks, 400);
+            }
+            var myConfetti = confetti.create(_getConfettiCanvas(), { resize: true, useWorker: false });
+
             var end = Date.now() + 3800;
             (function burst() {
-                confetti({
-                    particleCount: 50, spread: 65, origin: { x: Math.random(), y: Math.random() * 0.5 },
+                myConfetti({
+                    particleCount: 50, spread: 65,
+                    origin: { x: Math.random(), y: Math.random() * 0.5 },
                     colors: ['#10b981', '#6ee7b7', '#059669', '#ffffff', '#fbbf24', '#a7f3d0']
                 });
                 if (Date.now() < end) setTimeout(burst, 180);
             })();
+
             setTimeout(function () {
-                confetti({
+                myConfetti({
                     particleCount: 110, angle: 60, spread: 55, origin: { x: 0, y: 0.65 },
                     colors: ['#10b981', '#059669', '#fbbf24', '#ffffff']
                 });
-                confetti({
+                myConfetti({
                     particleCount: 110, angle: 120, spread: 55, origin: { x: 1, y: 0.65 },
                     colors: ['#10b981', '#059669', '#fbbf24', '#ffffff']
                 });
             }, 250);
+
+            setTimeout(function () {
+                myConfetti({
+                    particleCount: 150, spread: 150, startVelocity: 40,
+                    origin: { x: 0.5, y: 0 },
+                    colors: ['#10b981', '#6ee7b7', '#fbbf24', '#ffffff']
+                });
+            }, 1400);
         }
+
 
         // ── WORLD CHAMPION MODAL ──────────────────────────────────────────────
         // Bracket structure: matchId -> { homeSrc, awaySrc }
