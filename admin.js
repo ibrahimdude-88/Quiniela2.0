@@ -299,49 +299,136 @@ function renderMatchesTable() {
 
         const isKnockout = match.matchday >= 4;
 
+        // ── Bracket structure: which source matches feed each slot ─────
+        // matchId -> { homeSrc, awaySrc }  (src = match id whose winner plays here)
+        const BRACKET_STRUCT = {
+            // 16vos (8vos en 32 equipos) — matchday 4/5
+            74: { homeSrc: null, awaySrc: null },  // group qualifiers — handled below
+            75: { homeSrc: null, awaySrc: null },
+            76: { homeSrc: null, awaySrc: null },
+            77: { homeSrc: null, awaySrc: null },
+            78: { homeSrc: null, awaySrc: null },
+            79: { homeSrc: null, awaySrc: null },
+            80: { homeSrc: null, awaySrc: null },
+            81: { homeSrc: null, awaySrc: null },
+            82: { homeSrc: null, awaySrc: null },
+            83: { homeSrc: null, awaySrc: null },
+            84: { homeSrc: null, awaySrc: null },
+            85: { homeSrc: null, awaySrc: null },
+            86: { homeSrc: null, awaySrc: null },
+            87: { homeSrc: null, awaySrc: null },
+            88: { homeSrc: null, awaySrc: null },
+            // Quarters — matchday 6
+            89: { homeSrc: 74, awaySrc: 77 },
+            90: { homeSrc: 73, awaySrc: 75 },
+            91: { homeSrc: 76, awaySrc: 78 },
+            92: { homeSrc: 79, awaySrc: 80 },
+            93: { homeSrc: 83, awaySrc: 84 },
+            94: { homeSrc: 81, awaySrc: 82 },
+            95: { homeSrc: 86, awaySrc: 88 },
+            96: { homeSrc: 85, awaySrc: 87 },
+            // Semis — matchday 7
+            97: { homeSrc: 89, awaySrc: 90 },
+            98: { homeSrc: 91, awaySrc: 92 },
+            99: { homeSrc: 93, awaySrc: 94 },
+            100: { homeSrc: 95, awaySrc: 96 },
+            // Semi-finals matchday 7
+            101: { homeSrc: 97, awaySrc: 98 },
+            102: { homeSrc: 99, awaySrc: 100 },
+            // Final & 3rd — matchday 8
+            103: { homeSrc: 101, awaySrc: 102, useLosers: true },
+            104: { homeSrc: 101, awaySrc: 102 },
+        };
+
+        // Helper: resolve winner/loser of a match to a team code
+        const resolveMatchResult = (srcId, useLoser) => {
+            const srcMatch = matches.find(m => m.id === srcId);
+            if (!srcMatch || srcMatch.status !== 'f') return null;
+            let winner = null, loser = null;
+            if (srcMatch.penalty_winner) {
+                winner = srcMatch.penalty_winner === 'home' ? srcMatch.home_team : srcMatch.away_team;
+                loser = srcMatch.penalty_winner === 'home' ? srcMatch.away_team : srcMatch.home_team;
+            } else if (srcMatch.home_score != null && srcMatch.away_score != null) {
+                if (+srcMatch.home_score > +srcMatch.away_score) { winner = srcMatch.home_team; loser = srcMatch.away_team; }
+                else if (+srcMatch.away_score > +srcMatch.home_score) { winner = srcMatch.away_team; loser = srcMatch.home_team; }
+            }
+            return useLoser ? loser : winner;
+        };
+
         // Generate Dropdown Options for Knockout
-        let availableTeamsHtml = '';
+        let homeTeamOptions = '';
+        let awayTeamOptions = '';
+
         if (isKnockout) {
-            // Re-calculate qualified just in case
             if (Object.keys(allGroupStandings).length === 0) calculateStandings();
+            const struct = BRACKET_STRUCT[match.id];
 
-            // Collect all qualified teams
-            let qualifiedList = [];
-            Object.values(allGroupStandings).forEach(group => {
-                if (group[0]) qualifiedList.push(group[0].code);
-                if (group[1]) qualifiedList.push(group[1].code);
-                if (group[2] && qualifiedThirdPlaces.includes(group[2].code)) qualifiedList.push(group[2].code);
-            });
-            qualifiedList.sort();
+            if (struct && struct.homeSrc) {
+                // Higher-round match: options = winner (or loser for 3rd) of source match
+                const buildOptions = (srcId, useLoser, currentVal) => {
+                    const label = useLoser ? 'Perdedor' : 'Ganador';
+                    const resolved = resolveMatchResult(srcId, useLoser);
+                    const opts = [`<option value="TBD" ${!currentVal || currentVal === 'TBD' ? 'selected' : ''}>Por definir</option>`];
+                    if (resolved) {
+                        // Actual resolved team
+                        opts.push(`<option value="${resolved}" ${currentVal === resolved ? 'selected' : ''}>${friendlyTeamLabel(resolved)}</option>`);
+                    }
+                    // Also offer the W/L placeholder as option with friendly name
+                    const wlCode = (useLoser ? 'L' : 'W') + srcId;
+                    if (!resolved) {
+                        opts.push(`<option value="${wlCode}" ${currentVal === wlCode ? 'selected' : ''}>${label} Partido #${srcId}</option>`);
+                    }
+                    return opts.join('');
+                };
+                homeTeamOptions = buildOptions(struct.homeSrc, !!struct.useLosers, match.home_team);
+                awayTeamOptions = buildOptions(struct.awaySrc, !!struct.useLosers, match.away_team);
+            } else {
+                // Round of 16 / first knockout round: options = group qualifiers
+                let qualifiedList = [];
+                Object.values(allGroupStandings).forEach(group => {
+                    if (group[0]) qualifiedList.push(group[0].code);
+                    if (group[1]) qualifiedList.push(group[1].code);
+                    if (group[2] && qualifiedThirdPlaces.includes(group[2].code)) qualifiedList.push(group[2].code);
+                });
+                // Also include playoff/repechaje teams
+                ['UEFA1', 'UEFA2', 'UEFA3', 'UEFA4', 'IC1', 'IC2', 'CPV'].forEach(c => {
+                    if (!qualifiedList.includes(c)) qualifiedList.push(c);
+                });
+                qualifiedList.sort();
 
-            // Add current team if not in list (e.g. TBD)
-            if (!qualifiedList.includes(match.home_team)) qualifiedList.push(match.home_team);
-            if (!qualifiedList.includes(match.away_team)) qualifiedList.push(match.away_team);
-
-            availableTeamsHtml = qualifiedList.map(code =>
-                `<option value="${code}">${friendlyTeamLabel(code)}</option>`
-            ).join('');
+                const buildGroupOptions = (currentVal) => {
+                    const opts = [`<option value="TBD" ${!currentVal || currentVal === 'TBD' ? 'selected' : ''}>Por definir</option>`];
+                    // Ensure current value always appears even if not in list
+                    if (currentVal && currentVal !== 'TBD' && !qualifiedList.includes(currentVal)) {
+                        qualifiedList.push(currentVal);
+                    }
+                    qualifiedList.forEach(code => {
+                        if (code) opts.push(`<option value="${code}" ${currentVal === code ? 'selected' : ''}>${friendlyTeamLabel(code)}</option>`);
+                    });
+                    return opts.join('');
+                };
+                homeTeamOptions = buildGroupOptions(match.home_team);
+                awayTeamOptions = buildGroupOptions(match.away_team);
+            }
         }
 
         const homeTeamRender = isKnockout
-            ? `
-                <select onchange="updateMatchTeam(${match.id}, 'home', this.value)" class="bg-background-dark border border-white/10 rounded px-1 py-1 text-xs text-white max-w-[120px]">
-                    <option value="TBD" ${match.home_team === 'TBD' ? 'selected' : ''}>Por definir</option>
-                    ${availableTeamsHtml.replace(`value="${match.home_team}"`, `value="${match.home_team}" selected`)}
-                </select>
-            `
+            ? `<select onchange="updateMatchTeam(${match.id}, 'home', this.value)"
+                  class="bg-background-dark border border-white/10 rounded px-1 py-1 text-xs text-white max-w-[140px]">
+                  ${homeTeamOptions}
+               </select>`
             : `<span class="text-sm font-bold text-white text-right hidden md:inline">${friendlyTeamLabel(match.home_team)}</span>
                <span class="text-xs font-bold text-white md:hidden">${(TEAM_NAMES[match.home_team] || match.home_team || '').substring(0, 3)}</span>`;
 
         const awayTeamRender = isKnockout
-            ? `
-                <select onchange="updateMatchTeam(${match.id}, 'away', this.value)" class="bg-background-dark border border-white/10 rounded px-1 py-1 text-xs text-white max-w-[120px]">
-                     <option value="TBD" ${match.away_team === 'TBD' ? 'selected' : ''}>Por definir</option>
-                    ${availableTeamsHtml.replace(`value="${match.away_team}"`, `value="${match.away_team}" selected`)}
-                </select>
-            `
+            ? `<select onchange="updateMatchTeam(${match.id}, 'away', this.value)"
+                  class="bg-background-dark border border-white/10 rounded px-1 py-1 text-xs text-white max-w-[140px]">
+                  ${awayTeamOptions}
+               </select>`
             : `<span class="text-sm font-bold text-white hidden md:inline">${friendlyTeamLabel(match.away_team)}</span>
                <span class="text-xs font-bold text-white md:hidden">${(TEAM_NAMES[match.away_team] || match.away_team || '').substring(0, 3)}</span>`;
+
+
 
 
 
