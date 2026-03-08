@@ -489,19 +489,10 @@ window.saveAllResults = async () => {
     if (updatedCount > 0) {
         alert(`✅ ${updatedCount} partidos actualizados correctamente.\n${errorCount > 0 ? `⚠️ ${errorCount} errores.` : ''}`);
 
-        // Auto-run bracket automation if we're in knockout rounds
+        // Auto-advance bracket winners if we're in knockout rounds
         if (selectedAdminMatchday >= 4 && selectedAdminMatchday <= 7) {
-            console.log("Auto-running bracket update because knockout results were saved.");
-            // We temporarily override window.confirm to bypass the dialog
-            const origConfirm = window.confirm;
-            window.confirm = () => true;
-            const origAlert = window.alert;
-            window.alert = () => { }; // suppress success alert from automation
-
-            await window.automateBracket();
-
-            window.confirm = origConfirm;
-            window.alert = origAlert;
+            console.log("[BRACKET] Auto-advancing bracket winners after saving knockout results.");
+            await advanceBracketWinners();
         }
 
     } else if (errorCount > 0) {
@@ -1878,36 +1869,262 @@ async function renderBracketEditor() {
 
 // --- BRACKET AUTOMATION ---
 
-window.automateBracket = async () => {
-    if (!confirm('¿Estás seguro de autocompletar las llaves?\n\nEsto sobrescribirá los equipos de la fase eliminatoria basándose en la tabla de posiciones actual y la estructura oficial.')) return;
+/**
+ * advanceBracketWinners:
+ * Reads all finished knockout matches and updates the teams in the NEXT round
+ * only when both feeder matches are done (or at least one is done so we can partially fill).
+ * This is called automatically after saving results in Gestión de Partidos.
+ * It does NOT overwrite real teams with placeholder codes.
+ */
+async function advanceBracketWinners() {
+    console.log('[ADVANCE] Starting bracket winner propagation...');
 
-    const btn = document.querySelector('button[onclick="automateBracket()"]');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="material-icons animate-spin text-sm">refresh</span> Procesando...';
+    // Reload latest match data to ensure we have fresh results
+    await loadMatches();
+
+    // Map of: which match feeds into which slot of which future match
+    // Format: sourceMatchId -> { targetMatchId, slot: 'home'|'away', isWinner: true|false }
+    const feedMap = [
+        // 16vos (73-88) -> 8vos (89-96)
+        { src: 74, dest: 89, slot: 'home', win: true },
+        { src: 77, dest: 89, slot: 'away', win: true },
+        { src: 73, dest: 90, slot: 'home', win: true },
+        { src: 75, dest: 90, slot: 'away', win: true },
+        { src: 76, dest: 91, slot: 'home', win: true },
+        { src: 78, dest: 91, slot: 'away', win: true },
+        { src: 79, dest: 92, slot: 'home', win: true },
+        { src: 80, dest: 92, slot: 'away', win: true },
+        { src: 83, dest: 93, slot: 'home', win: true },
+        { src: 84, dest: 93, slot: 'away', win: true },
+        { src: 81, dest: 94, slot: 'home', win: true },
+        { src: 82, dest: 94, slot: 'away', win: true },
+        { src: 86, dest: 95, slot: 'home', win: true },
+        { src: 88, dest: 95, slot: 'away', win: true },
+        { src: 85, dest: 96, slot: 'home', win: true },
+        { src: 87, dest: 96, slot: 'away', win: true },
+        // 8vos (89-96) -> Cuartos (97-100)
+        { src: 89, dest: 97, slot: 'home', win: true },
+        { src: 90, dest: 97, slot: 'away', win: true },
+        { src: 91, dest: 98, slot: 'home', win: true },
+        { src: 92, dest: 98, slot: 'away', win: true },
+        { src: 93, dest: 99, slot: 'home', win: true },
+        { src: 94, dest: 99, slot: 'away', win: true },
+        { src: 95, dest: 100, slot: 'home', win: true },
+        { src: 96, dest: 100, slot: 'away', win: true },
+        // Cuartos (97-100) -> Semis (101-102)
+        { src: 97, dest: 101, slot: 'home', win: true },
+        { src: 98, dest: 101, slot: 'away', win: true },
+        { src: 99, dest: 102, slot: 'home', win: true },
+        { src: 100, dest: 102, slot: 'away', win: true },
+        // Semis (101-102) -> Final (104) y 3er lugar (103)
+        { src: 101, dest: 104, slot: 'home', win: true },
+        { src: 102, dest: 104, slot: 'away', win: true },
+        { src: 101, dest: 103, slot: 'home', win: false },  // Loser -> 3rd place
+        { src: 102, dest: 103, slot: 'away', win: false },  // Loser -> 3rd place
+    ];
+
+    // Helper: get the winner or loser team code from a finished match
+    const getResultTeam = (match, wantWinner) => {
+        if (!match || match.status !== 'f') return null;
+        // Determine winner by penalty first
+        if (match.penalty_winner) {
+            const winTeam = match.penalty_winner === 'home' ? match.home_team : match.away_team;
+            const loseTeam = match.penalty_winner === 'home' ? match.away_team : match.home_team;
+            return wantWinner ? winTeam : loseTeam;
+        }
+        // Determine winner by score
+        if (match.home_score !== null && match.away_score !== null) {
+            if (match.home_score > match.away_score) {
+                return wantWinner ? match.home_team : match.away_team;
+            } else if (match.away_score > match.home_score) {
+                return wantWinner ? match.away_team : match.home_team;
+            }
+        }
+        return null; // Tie without penalty = unresolved
+    };
+
+    // Collect updates: { matchId -> { home_team?, away_team? } }
+    const pendingUpdates = {};
+
+    for (const feed of feedMap) {
+        const srcMatch = matches.find(m => m.id === feed.src);
+        if (!srcMatch || srcMatch.status !== 'f') continue; // Source not finished yet, skip
+
+        const resolvedTeam = getResultTeam(srcMatch, feed.win);
+        if (!resolvedTeam) continue; // Can't determine winner/loser yet
+
+        // Only update if the destination slot is still a placeholder (Wxx, Lxx, or TBD)
+        const destMatch = matches.find(m => m.id === feed.dest);
+        if (!destMatch) continue;
+
+        const currentSlotValue = feed.slot === 'home' ? destMatch.home_team : destMatch.away_team;
+        const isPlaceholder = !currentSlotValue ||
+            currentSlotValue === 'TBD' ||
+            /^[WL]\d+$/.test(currentSlotValue); // matches W73, L101, etc.
+
+        if (!isPlaceholder) {
+            console.log(`[ADVANCE] Match ${feed.dest} slot '${feed.slot}' already has real team '${currentSlotValue}', skipping.`);
+            continue;
+        }
+
+        if (!pendingUpdates[feed.dest]) pendingUpdates[feed.dest] = {};
+        pendingUpdates[feed.dest][feed.slot + '_team'] = resolvedTeam;
+        console.log(`[ADVANCE] Will set Match ${feed.dest}.${feed.slot} = ${resolvedTeam} (from W/L${feed.src})`);
+    }
+
+    // Apply updates to DB
+    let successCount = 0;
+    let failCount = 0;
+    for (const [matchIdStr, updateObj] of Object.entries(pendingUpdates)) {
+        const matchId = parseInt(matchIdStr);
+        try {
+            const { error } = await supabaseAdmin
+                .from('matches')
+                .update(updateObj)
+                .eq('id', matchId);
+            if (error) {
+                console.error(`[ADVANCE] Error updating match ${matchId}:`, error);
+                failCount++;
+            } else {
+                console.log(`[ADVANCE] Match ${matchId} updated:`, updateObj);
+                successCount++;
+            }
+        } catch (e) {
+            console.error(`[ADVANCE] Crash on match ${matchId}:`, e);
+            failCount++;
+        }
+    }
+
+    console.log(`[ADVANCE] Done. Updated ${successCount} matches, ${failCount} errors.`);
+
+    if (successCount > 0) {
+        // Reload to reflect changes
+        await loadMatches();
+        renderBracketEditor();
+        console.log('[ADVANCE] Bracket advanced successfully. ✅');
+    }
+}
+
+
+window.automateBracket = async () => {
+    if (!confirm('¿Estás seguro de autocompletar las llaves?\n\nEsto actualizará los equipos de la fase eliminatoria basándose en la tabla de posiciones actual y la estructura oficial.')) return;
+
+    // ── Progress Modal Helpers ──────────────────────────────────────
+    const modal = document.getElementById('bracket-progress-modal');
+    const inner = document.getElementById('bracket-progress-inner');
+    const barEl = document.getElementById('bpm-bar');
+    const pctEl = document.getElementById('bpm-pct');
+    const labelEl = document.getElementById('bpm-step-label');
+    const stepsEl = document.getElementById('bpm-steps');
+    const titleEl = document.getElementById('bpm-title');
+    const iconEl = document.getElementById('bpm-icon');
+
+    /** Show / reset the modal */
+    const showProgress = () => {
+        stepsEl.innerHTML = '';
+        barEl.style.width = '0%';
+        pctEl.textContent = '0%';
+        titleEl.textContent = 'Autocompletando bracket...';
+        iconEl.textContent = 'auto_fix_high';
+        iconEl.className = 'material-icons text-emerald-400 text-xl';
+        labelEl.textContent = 'Iniciando...';
+        modal.classList.remove('hidden');
+        // Animate in
+        requestAnimationFrame(() => {
+            modal.style.opacity = '1';
+            if (inner) inner.style.transform = 'scale(1)';
+        });
+    };
+
+    /** Advance the progress bar */
+    const setProgress = (pct, label) => {
+        barEl.style.width = pct + '%';
+        pctEl.textContent = pct + '%';
+        if (label) labelEl.textContent = label;
+    };
+
+    /** Add a step row to the log */
+    const addStep = (text, type = 'info') => {
+        const colors = {
+            info: 'text-slate-400',
+            success: 'text-emerald-400',
+            warn: 'text-yellow-400',
+            error: 'text-red-400',
+        };
+        const icons = {
+            info: 'radio_button_unchecked',
+            success: 'check_circle',
+            warn: 'warning',
+            error: 'error',
+        };
+        const div = document.createElement('div');
+        div.className = `step-item flex items-start gap-2 text-xs ${colors[type] || colors.info}`;
+        div.innerHTML = `<span class="material-icons text-xs mt-0.5 flex-shrink-0">${icons[type] || icons.info}</span><span>${text}</span>`;
+        stepsEl.appendChild(div);
+        stepsEl.scrollTop = stepsEl.scrollHeight;
+    };
+
+    /** Close the modal with animation */
+    const hideProgress = () => {
+        modal.style.opacity = '0';
+        if (inner) inner.style.transform = 'scale(0.92)';
+        setTimeout(() => modal.classList.add('hidden'), 280);
+    };
+
+    /** Mark the modal as "done" (success state) */
+    const markDone = (success) => {
+        if (success) {
+            titleEl.textContent = '¡Llaves actualizadas!';
+            iconEl.textContent = 'check_circle';
+            iconEl.className = 'material-icons text-emerald-400 text-xl';
+            barEl.classList.remove('progress-bar-shimmer');
+            barEl.style.background = '#10b981';
+            setProgress(100, 'Completado');
+        } else {
+            titleEl.textContent = 'Ocurrió un error';
+            iconEl.textContent = 'error';
+            iconEl.className = 'material-icons text-red-400 text-xl';
+            setProgress(100, 'Terminado con errores');
+        }
+    };
+
+    // ── Disable button ──────────────────────────────────────────────
+    const btn = document.querySelector('button[onclick*="automateBracket"]');
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-icons animate-spin text-sm">refresh</span> Procesando...';
+    }
+
+    showProgress();
 
     try {
         console.log('[BRACKET AUTO] Starting automation...');
 
-        // 1. Ensure Standings are up to date
+        // ── Step 1: Calculate Standings ─────────────────────────────
+        setProgress(5, 'Calculando standings...');
+        addStep('Calculando tabla de posiciones de grupos...', 'info');
         await calculateStandings();
+        addStep('Standings calculados ✓', 'success');
+        setProgress(15, 'Seleccionando mejores terceros...');
+        await new Promise(r => setTimeout(r, 120)); // small delay so UI updates
 
-        // 1.5 Auto-Pick Top 8 Third-Place Teams
+        // ── Step 2: Auto-Pick Top 8 Third-Place Teams ───────────────
         const thirdPlaceCandidates = [];
         Object.values(allGroupStandings).forEach(groupData => {
             if (groupData[2]) thirdPlaceCandidates.push(groupData[2]);
         });
-        // Sort by Points > Goal Diff > Goals For
         thirdPlaceCandidates.sort((a, b) => b.pts - a.pts || b.dif - a.dif || b.gf - a.gf);
-
-        // Emulate qualified list (Top 8)
         const best8 = thirdPlaceCandidates.slice(0, 8).map(t => t.code);
         qualifiedThirdPlaces = best8;
 
+        addStep(`Top 8 Terceros seleccionados: ${best8.join(', ')}`, 'success');
+        setProgress(22, 'Guardando terceros clasificados...');
         await supabaseAdmin.from('app_settings').upsert({ key: 'qualified_third_places', value: best8 });
+        setProgress(28, 'Definiendo estructura del bracket...');
+        await new Promise(r => setTimeout(r, 80));
 
-        // 2. Define the Bracket Structure (Updated per User Request)
-        // Note: For 3rd places, this logic is complex. We use generic placeholders for now.
+        // ── Step 3: Bracket Structure ───────────────────────────────
         const structure = [
             // ROUND OF 32 (16vos) - Matches 73-88
             { id: 73, home: '2A', away: '2B' },
@@ -1926,7 +2143,6 @@ window.automateBracket = async () => {
             { id: 86, home: '1J', away: '2H' },
             { id: 87, home: '1K', away: '3DEIJL' },
             { id: 88, home: '2D', away: '2G' },
-
             // ROUND OF 16 (Octavos) - Matches 89-96
             { id: 89, home: 'W74', away: 'W77' },
             { id: 90, home: 'W73', away: 'W75' },
@@ -1936,52 +2152,46 @@ window.automateBracket = async () => {
             { id: 94, home: 'W81', away: 'W82' },
             { id: 95, home: 'W86', away: 'W88' },
             { id: 96, home: 'W85', away: 'W87' },
-
             // QUARTERS (Cuartos) - Matches 97-100
             { id: 97, home: 'W89', away: 'W90' },
             { id: 98, home: 'W91', away: 'W92' },
             { id: 99, home: 'W93', away: 'W94' },
             { id: 100, home: 'W95', away: 'W96' },
-
             // SEMIS - Matches 101-102
             { id: 101, home: 'W97', away: 'W98' },
             { id: 102, home: 'W99', away: 'W100' },
-
             // FINAL & 3RD
-            { id: 103, home: 'L101', away: 'L102' }, // 3rd Place
-            { id: 104, home: 'W101', away: 'W102' }  // Final
+            { id: 103, home: 'L101', away: 'L102' },
+            { id: 104, home: 'W101', away: 'W102' }
         ];
 
-        // 3. Resolve Teams
+        // ── Step 4: Resolve Teams ───────────────────────────────────
+        addStep('Resolviendo equipos del bracket...', 'info');
+        setProgress(32, 'Resolviendo equipos...');
+
         const claimedThirdPlaces = new Set();
-        // Helper to get team from code like '1A', '2B', '3ABCDF', 'W73', 'L74'
+        const isPlaceholder = (code) => !code || code === 'TBD' || /^[WL]\d+$/.test(code);
+
         const getTeam = (code) => {
-            // Handle Winner/Loser from previous matches
             if (code.startsWith('W') || code.startsWith('L')) {
                 const isWinner = code.startsWith('W');
                 const matchId = parseInt(code.substring(1));
                 const previousMatch = matches.find(m => m.id === matchId);
-
                 if (previousMatch && previousMatch.status === 'f') {
-                    // Check penalties first
                     if (previousMatch.penalty_winner) {
                         const winCode = previousMatch.penalty_winner === 'home' ? previousMatch.home_team : previousMatch.away_team;
                         const loseCode = previousMatch.penalty_winner === 'home' ? previousMatch.away_team : previousMatch.home_team;
                         return getTeam(isWinner ? winCode : loseCode);
                     }
-                    // Check regular score
                     if (previousMatch.home_score !== null && previousMatch.away_score !== null) {
-                        if (previousMatch.home_score > previousMatch.away_score) {
+                        if (previousMatch.home_score > previousMatch.away_score)
                             return getTeam(isWinner ? previousMatch.home_team : previousMatch.away_team);
-                        } else if (previousMatch.away_score > previousMatch.home_score) {
+                        else if (previousMatch.away_score > previousMatch.home_score)
                             return getTeam(isWinner ? previousMatch.away_team : previousMatch.home_team);
-                        }
                     }
                 }
-                return code; // Keep placeholder if match not finished or tied without penalties
+                return code;
             }
-
-            // Handle 3rd Place Placeholders (e.g. 3ABCDF) logic: First Available Qualified
             if (code.startsWith('3') && code.length > 2) {
                 const possibleGroups = code.substring(1).split('');
                 for (const g of possibleGroups) {
@@ -1993,76 +2203,104 @@ window.automateBracket = async () => {
                 }
                 return code;
             }
-
-            const regex = /^(\d)([A-L])$/; // Matches '1A', '2B'
-            const match = code.match(regex);
-
-            if (match) {
-                const pos = parseInt(match[1]);
-                const group = match[2];
-                // Check standings
-                const groupData = allGroupStandings[group];
-                if (groupData && groupData[pos - 1]) {
-                    return groupData[pos - 1].code;
-                }
+            const m = code.match(/^(\d)([A-L])$/);
+            if (m) {
+                const groupData = allGroupStandings[m[2]];
+                if (groupData && groupData[parseInt(m[1]) - 1])
+                    return groupData[parseInt(m[1]) - 1].code;
             }
-            return code; // Fallback to placeholder if not found
+            return code;
         };
 
+        // Build update list – skip fully-unresolved slots
         const updates = [];
-
-        // 4. Build Updates
         for (const item of structure) {
             const homeTeam = getTeam(item.home);
             const awayTeam = getTeam(item.away);
-
-            updates.push({
-                id: item.id,
-                home_team: homeTeam,
-                away_team: awayTeam
-            });
+            const upd = { id: item.id };
+            if (!isPlaceholder(homeTeam)) upd.home_team = homeTeam;
+            if (!isPlaceholder(awayTeam)) upd.away_team = awayTeam;
+            if (!upd.home_team && !upd.away_team) continue;
+            updates.push(upd);
         }
 
-        // 5. Exec Updates (Sequential but robust)
+        addStep(`${updates.length} partidos a actualizar en el bracket`, 'info');
+        setProgress(38, `Actualizando ${updates.length} partidos...`);
+        await new Promise(r => setTimeout(r, 80));
+
+        // ── Step 5: Execute DB Updates with per-item progress ───────
         let successCount = 0;
         let failCount = 0;
+        const pctStart = 40;
+        const pctEnd = 88;
 
-        for (const update of updates) {
+        for (let i = 0; i < updates.length; i++) {
+            const { id, ...fields } = updates[i];
+            const pct = Math.round(pctStart + ((i + 1) / updates.length) * (pctEnd - pctStart));
+            setProgress(pct, `Guardando partido #${id}...`);
+
             try {
-                // We use .update to avoid overwriting fields with upsert or triggering NOT NULL errors on missing fields
                 const { error } = await supabaseAdmin
                     .from('matches')
-                    .update({ home_team: update.home_team, away_team: update.away_team })
-                    .eq('id', update.id);
+                    .update(fields)
+                    .eq('id', id);
 
                 if (error) {
-                    console.error(`[BRACKET AUTO] Error updating match ${update.id}:`, error);
+                    console.error(`[BRACKET AUTO] Error match ${id}:`, error);
+                    addStep(`Error en partido #${id}: ${error.message}`, 'error');
                     failCount++;
                 } else {
+                    const homeLabel = fields.home_team || '—';
+                    const awayLabel = fields.away_team || '—';
+                    addStep(`Partido #${id}: ${homeLabel} vs ${awayLabel} ✓`, 'success');
                     successCount++;
                 }
             } catch (innerErr) {
-                console.error(`[BRACKET AUTO] Crash on match ${update.id}:`, innerErr);
+                console.error(`[BRACKET AUTO] Crash match ${id}:`, innerErr);
+                addStep(`Crash en partido #${id}`, 'error');
                 failCount++;
             }
         }
 
         console.log(`[BRACKET AUTO] Finished. Success: ${successCount}, Failed: ${failCount}`);
+        setProgress(90, 'Recargando datos...');
+        addStep('Recargando partidos desde la base de datos...', 'info');
 
-        // 6. Refresh
-        await loadMatches(); // Reload match data
-        renderBracketEditor(); // Re-render logic
+        // ── Step 6: Refresh view automatically ─────────────────────
+        await loadMatches();
+        setProgress(96, 'Actualizando vista...');
 
-        alert('✅ Llaves actualizadas automáticamente base a la estructura oficial.');
+        // Re-render bracket editor for the current round
+        renderBracketEditor();
+
+        // Also refresh the qualified teams section if visible
+        renderQualifiedTeamsSection();
+
+        setProgress(100, 'Completado');
+        markDone(failCount === 0);
+        addStep(
+            failCount === 0
+                ? `✅ ${successCount} llaves actualizadas exitosamente.`
+                : `⚠️ ${successCount} ok, ${failCount} con error.`,
+            failCount === 0 ? 'success' : 'warn'
+        );
+
+        // Auto-close the modal after 2 seconds
+        setTimeout(() => hideProgress(), 2000);
 
     } catch (err) {
         console.error('[BRACKET AUTO] Error:', err);
-        alert('Error al autocompletar: ' + err.message);
+        addStep('Error crítico: ' + err.message, 'error');
+        markDone(false);
+        setTimeout(() => hideProgress(), 3000);
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     }
 };
+
 
 // Check and Fix Tournament Schedule (Auto-Repair)
 async function fixTournamentSchedule() {

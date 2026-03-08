@@ -104,6 +104,56 @@
                 transform: scale(1.1);
             }
         }
+
+        /* Bracket Progress Modal */
+        @keyframes shimmer {
+            0% {
+                background-position: -200% center;
+            }
+
+            100% {
+                background-position: 200% center;
+            }
+        }
+
+        @keyframes pulse-scale {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes step-pop {
+            0% {
+                opacity: 0;
+                transform: translateX(-8px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .progress-bar-shimmer {
+            background: linear-gradient(90deg,
+                    #10b981 0%,
+                    #34d399 40%,
+                    #6ee7b7 50%,
+                    #34d399 60%,
+                    #10b981 100%);
+            background-size: 200% auto;
+            animation: shimmer 1.4s linear infinite;
+        }
+
+        .step-item {
+            animation: step-pop 0.3s ease forwards;
+        }
     </style>
     <!-- Confetti Logic -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -712,6 +762,46 @@
                         class="flex-1 py-2 rounded-lg bg-red-500 hover:bg-red-400 text-white font-bold transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-2">
                         <span class="material-icons text-sm">delete</span> Confirmar
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bracket Automation Progress Modal -->
+    <div id="bracket-progress-modal"
+        class="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-md hidden"
+        style="opacity:0; transition: opacity 0.25s ease;">
+        <div id="bracket-progress-inner"
+            class="bg-[#0f1623] w-full max-w-md mx-4 rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+            style="transform: scale(0.92); transition: transform 0.25s ease;">
+
+            <!-- Header -->
+            <div class="px-6 pt-6 pb-4 border-b border-white/5 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                    <span class="material-icons text-emerald-400 text-xl" id="bpm-icon">auto_fix_high</span>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Gestión de Llaves</p>
+                    <h3 class="text-lg font-black text-white" id="bpm-title">Autocompletando bracket...</h3>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="px-6 py-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-slate-400" id="bpm-step-label">Iniciando...</span>
+                    <span class="text-xs font-bold text-emerald-400" id="bpm-pct">0%</span>
+                </div>
+                <div class="h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                    <div id="bpm-bar" class="h-full rounded-full progress-bar-shimmer transition-all duration-500"
+                        style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- Steps Log -->
+            <div class="px-6 pb-6">
+                <div id="bpm-steps" class="space-y-1.5 max-h-44 overflow-y-auto custom-scrollbar pr-1">
+                    <!-- steps injected via JS -->
                 </div>
             </div>
         </div>
