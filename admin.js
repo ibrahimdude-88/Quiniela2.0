@@ -2299,8 +2299,49 @@ window.automateBracket = async () => {
         addStep('Resolviendo equipos del bracket...', 'info');
         setProgress(32, 'Resolviendo equipos...');
 
-        const claimedThirdPlaces = new Set();
-        const isPlaceholder = (code) => !code || code === 'TBD' || /^[WL]\d+$/.test(code);
+        // Correctly allocate 3rd places using backtracking to avoid getting stuck with unmatched slots
+        const thirdPlaceSlots = [
+            '3ABCDF', '3CDFGH', '3CEFHI', '3EHIJK', 
+            '3BEFIJ', '3AEHIJ', '3EFGIJ', '3DEIJL'
+        ];
+        
+        const q3Teams = qualifiedThirdPlaces.map(code => {
+            // Find group for this team
+            for (const [groupLetter, groupData] of Object.entries(allGroupStandings)) {
+                if (groupData[2] && groupData[2].code === code) return { code, group: groupLetter };
+            }
+            return { code, group: '?' };
+        }).filter(t => t.group !== '?');
+
+        function solveThirdPlaces(slotIndex, currentAssignment, usedTeams) {
+            if (slotIndex >= thirdPlaceSlots.length) {
+                return currentAssignment;
+            }
+            const slot = thirdPlaceSlots[slotIndex];
+            const allowedGroups = slot.substring(1).split('');
+            
+            for (let i = 0; i < q3Teams.length; i++) {
+                const team = q3Teams[i];
+                if (!usedTeams.has(team.code) && allowedGroups.includes(team.group)) {
+                    usedTeams.add(team.code);
+                    currentAssignment[slot] = team.code;
+                    const res = solveThirdPlaces(slotIndex + 1, currentAssignment, usedTeams);
+                    if (res) return res;
+                    usedTeams.delete(team.code);
+                    delete currentAssignment[slot];
+                }
+            }
+            return null; // backtrack if no valid assignment
+        }
+        
+        const thirdPlaceMatches = solveThirdPlaces(0, {}, new Set());
+        if (!thirdPlaceMatches) {
+            console.warn("[BRACKET AUTO] No perfect matching found for 3rd places! Ensure the top 8 are a valid combination.");
+        } else {
+            console.log("[BRACKET AUTO] Perfect 3rd place matching found:", thirdPlaceMatches);
+        }
+
+        const isPlaceholder = (code) => !code || code === 'TBD' || /^[WL]\d+$/.test(code) || /^3[A-L]{3,}$/.test(code);
 
         const getTeam = (code) => {
             if (code.startsWith('W') || code.startsWith('L')) {
@@ -2323,14 +2364,10 @@ window.automateBracket = async () => {
                 return code;
             }
             if (code.startsWith('3') && code.length > 2) {
-                const possibleGroups = code.substring(1).split('');
-                for (const g of possibleGroups) {
-                    const team = allGroupStandings[g] && allGroupStandings[g][2];
-                    if (team && qualifiedThirdPlaces.includes(team.code) && !claimedThirdPlaces.has(team.code)) {
-                        claimedThirdPlaces.add(team.code);
-                        return team.code;
-                    }
+                if (thirdPlaceMatches && thirdPlaceMatches[code]) {
+                    return thirdPlaceMatches[code];
                 }
+                // Fallback to placeholder if not found
                 return code;
             }
             const m = code.match(/^(\d)([A-L])$/);

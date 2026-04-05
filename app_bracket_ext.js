@@ -536,6 +536,7 @@
             AUS: 'au', CRC: 'cr', POL: 'pl', TUN: 'tn', DEN: 'dk', SRB: 'rs', WAL: 'gb-wls',
             QAT: 'qa', RSA: 'za', PAR: 'py', SCO: 'gb-sct', CIV: 'ci', COL: 'co', ITA: 'it',
             PAN: 'pa', AUT: 'at', ALG: 'dz', BOL: 'bo', VEN: 've', CHI: 'cl', PER: 'pe',
+            JOR: 'jo', NZL: 'nz', EGY: 'eg', UZB: 'uz', HAI: 'ht', CUR: 'cw', NOR: 'no',
             CPV: 'cv', COD: 'cd', IRQ: 'iq', BIH: 'ba', SWE: 'se', TUR: 'tr', CZE: 'cz'
         };
         if (!code) return 'https://flagcdn.com/w40/un.png';
