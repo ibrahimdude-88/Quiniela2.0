@@ -522,7 +522,8 @@
             CIV: 'Costa de Marfil', AUT: 'Austria', ALG: 'Argelia', BOL: 'Bolivia',
             VEN: 'Venezuela', CHI: 'Chile', PER: 'Perú', NZL: 'Nueva Zelanda',
             EGY: 'Egipto', UZB: 'Uzbekistán', HAI: 'Haití', CPV: 'Cabo Verde',
-            CUR: 'Curazao', NOR: 'Noruega', JOR: 'Jordania'
+            CUR: 'Curazao', NOR: 'Noruega', JOR: 'Jordania',
+            COD: 'RD Congo', IRQ: 'Irak', BIH: 'Bosnia y Herz.', SWE: 'Suecia', TUR: 'Turquía', CZE: 'Rep. Checa'
         };
         return map[s] || s;
     }
@@ -534,7 +535,8 @@
             SEN: 'sn', MAR: 'ma', SUI: 'ch', GHA: 'gh', CMR: 'cm', ECU: 'ec', KSA: 'sa', IRN: 'ir',
             AUS: 'au', CRC: 'cr', POL: 'pl', TUN: 'tn', DEN: 'dk', SRB: 'rs', WAL: 'gb-wls',
             QAT: 'qa', RSA: 'za', PAR: 'py', SCO: 'gb-sct', CIV: 'ci', COL: 'co', ITA: 'it',
-            PAN: 'pa', AUT: 'at', ALG: 'dz', BOL: 'bo', VEN: 've', CHI: 'cl', PER: 'pe'
+            PAN: 'pa', AUT: 'at', ALG: 'dz', BOL: 'bo', VEN: 've', CHI: 'cl', PER: 'pe',
+            CPV: 'cv', COD: 'cd', IRQ: 'iq', BIH: 'ba', SWE: 'se', TUR: 'tr', CZE: 'cz'
         };
         if (!code) return 'https://flagcdn.com/w40/un.png';
         var s = String(code);

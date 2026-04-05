@@ -20,7 +20,8 @@ const getFlagUrl = (teamCode) => {
         'WAL': 'wls', 'QAT': 'qa', 'RSA': 'za', 'PAR': 'py', 'SCO': 'sc',
         'CIV': 'ci', 'COL': 'co', 'PAN': 'pa', 'AUT': 'at', 'ALG': 'dz',
         'JOR': 'jo', 'NZL': 'nz', 'EGY': 'eg', 'UZB': 'uz', 'HAI': 'ht',
-        'CUR': 'cw', 'NOR': 'no'
+        'CUR': 'cw', 'NOR': 'no',
+        'CPV': 'cv', 'COD': 'cd', 'IRQ': 'iq', 'BIH': 'ba', 'SWE': 'se', 'TUR': 'tr', 'CZE': 'cz'
     };
     const code = codeMap[teamCode] || 'un';
     return `https://flagcdn.com/w80/${code}.png`;

@@ -33,7 +33,8 @@ const getFlagUrl = (teamCode) => {
         'WAL': 'wls', 'QAT': 'qa', 'RSA': 'za', 'PAR': 'py', 'SCO': 'sc',
         'CIV': 'ci', 'COL': 'co', 'PAN': 'pa', 'AUT': 'at', 'ALG': 'dz',
         'JOR': 'jo', 'NZL': 'nz', 'EGY': 'eg', 'UZB': 'uz', 'HAI': 'ht',
-        'CUR': 'cw', 'NOR': 'no'
+        'CUR': 'cw', 'NOR': 'no',
+        'CPV': 'cv', 'COD': 'cd', 'IRQ': 'iq', 'BIH': 'ba', 'SWE': 'se', 'TUR': 'tr', 'CZE': 'cz'
     };
     const code = codeMap[teamCode] || 'un';
     return `https://flagcdn.com/w80/${code}.png`;
@@ -49,7 +50,8 @@ const TEAM_NAMES = {
     'WAL': 'Gales', 'QAT': 'Qatar', 'RSA': 'Sudáfrica', 'PAR': 'Paraguay', 'SCO': 'Escocia',
     'CIV': 'Costa de Marfil', 'COL': 'Colombia', 'PAN': 'Panamá', 'AUT': 'Austria', 'ALG': 'Argelia',
     'JOR': 'Jordania', 'NZL': 'Nueva Zelanda', 'EGY': 'Egipto', 'UZB': 'Uzbekistán', 'HAI': 'Haití',
-    'CUR': 'Curazao', 'NOR': 'Noruega'
+    'CUR': 'Curazao', 'NOR': 'Noruega',
+    'CPV': 'Cabo Verde', 'COD': 'RD Congo', 'IRQ': 'Irak', 'BIH': 'Bosnia y Herz.', 'SWE': 'Suecia', 'TUR': 'Turquía', 'CZE': 'Rep. Checa'
 };
 
 let qualifiedThirdPlaces = [];
