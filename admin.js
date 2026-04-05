@@ -666,10 +666,33 @@ async function loadSettings() {
 
         if (feeSetting) document.getElementById('entry-fee').value = feeSetting.value;
         if (distSetting && Array.isArray(distSetting.value)) {
-            document.getElementById('dist-1').value = distSetting.value[0];
-            document.getElementById('dist-2').value = distSetting.value[1];
-            document.getElementById('dist-3').value = distSetting.value[2];
+            if (distSetting.value[0] !== undefined) document.getElementById('dist-1').value = distSetting.value[0];
+            if (distSetting.value[1] !== undefined) document.getElementById('dist-2').value = distSetting.value[1];
+            if (distSetting.value[2] !== undefined) document.getElementById('dist-3').value = distSetting.value[2];
+            if (distSetting.value[3] !== undefined && distSetting.value[3] > 0) {
+                const inp4 = document.getElementById('dist-4');
+                inp4.disabled = false;
+                inp4.value = distSetting.value[3];
+                inp4.classList.remove('text-slate-500', 'disabled:opacity-50');
+                inp4.classList.add('text-white');
+                const lbl4 = document.getElementById('label-dist-4');
+                if (lbl4) lbl4.style.opacity = '1';
+                const btn4 = document.getElementById('toggle-dist-4');
+                if (btn4) { btn4.innerHTML = '<span class="material-icons text-[12px]">remove</span>'; btn4.classList.add('text-red-400'); btn4.classList.remove('text-slate-500'); }
+            }
+            if (distSetting.value[4] !== undefined && distSetting.value[4] > 0) {
+                const inp5 = document.getElementById('dist-5');
+                inp5.disabled = false;
+                inp5.value = distSetting.value[4];
+                inp5.classList.remove('text-slate-500', 'disabled:opacity-50');
+                inp5.classList.add('text-white');
+                const lbl5 = document.getElementById('label-dist-5');
+                if (lbl5) lbl5.style.opacity = '1';
+                const btn5 = document.getElementById('toggle-dist-5');
+                if (btn5) { btn5.innerHTML = '<span class="material-icons text-[12px]">remove</span>'; btn5.classList.add('text-red-400'); btn5.classList.remove('text-slate-500'); }
+            }
         }
+        initPrizeDistributionUI();
 
         const regEnabledSetting = data.find(s => s.key === 'registration_enabled');
         if (regEnabledSetting !== undefined) {
@@ -1396,17 +1419,26 @@ function setupEventListeners() {
     if (saveBtn) {
         saveBtn.onclick = async () => {
             const fee = document.getElementById('entry-fee').value;
-            const d1 = document.getElementById('dist-1').value;
-            const d2 = document.getElementById('dist-2').value;
-            const d3 = document.getElementById('dist-3').value;
+            const d1 = parseInt(document.getElementById('dist-1').value) || 0;
+            const d2 = parseInt(document.getElementById('dist-2').value) || 0;
+            const d3 = parseInt(document.getElementById('dist-3').value) || 0;
+            const inp4 = document.getElementById('dist-4');
+            const inp5 = document.getElementById('dist-5');
+            const d4 = inp4.disabled ? 0 : (parseInt(inp4.value) || 0);
+            const d5 = inp5.disabled ? 0 : (parseInt(inp5.value) || 0);
             const regEnabled = document.getElementById('reg-enabled').checked;
 
-            if (fee) await supabase.from('app_settings').upsert({ key: 'entry_fee', value: parseInt(fee) });
-            if (d1 && d2 && d3) await supabase.from('app_settings').upsert({ key: 'prize_distribution', value: [parseInt(d1), parseInt(d2), parseInt(d3)] });
+            const total = d1 + d2 + d3 + d4 + d5;
+            if (total !== 100) {
+                alert(`❌ La distribución debe sumar 100%. Actualmente suma ${total}%.`);
+                return;
+            }
 
+            if (fee) await supabase.from('app_settings').upsert({ key: 'entry_fee', value: parseInt(fee) });
+            await supabase.from('app_settings').upsert({ key: 'prize_distribution', value: [d1, d2, d3, d4, d5] });
             await supabase.from('app_settings').upsert({ key: 'registration_enabled', value: regEnabled });
 
-            alert('Configuración guardada');
+            alert('✅ Configuración guardada');
         };
     }
 
@@ -1424,6 +1456,89 @@ function setupEventListeners() {
             renderMatches();
         };
     });
+}
+
+// --- Prize Distribution UI ---
+function initPrizeDistributionUI() {
+    const COLORS = ['text-accent-gold', 'text-slate-300', 'text-orange-400', 'text-blue-400', 'text-purple-400'];
+    const BORDER = ['border-accent-gold', 'border-slate-300', 'border-orange-400', 'border-blue-400', 'border-purple-400'];
+
+    function updatePoolDisplay() {
+        const fee = parseFloat(document.getElementById('entry-fee')?.value) || 0;
+        const vals = [1, 2, 3, 4, 5].map(i => {
+            const inp = document.getElementById(`dist-${i}`);
+            return inp && !inp.disabled ? (parseFloat(inp.value) || 0) : 0;
+        });
+        const total = vals.reduce((a, b) => a + b, 0);
+
+        // Sum validation indicator
+        const errEl = document.getElementById('dist-error');
+        const sumEl = document.getElementById('dist-sum');
+        if (errEl && sumEl) {
+            sumEl.textContent = total;
+            errEl.classList.toggle('hidden', total === 100);
+        }
+
+        // Pool estimate: fee * real (non-test) users
+        const realUsers = (typeof users !== 'undefined') ? users.filter(u => !u.is_test).length : 0;
+        const estimatedPool = fee * realUsers;
+        const poolEl = document.getElementById('estimated-pool');
+        if (poolEl) {
+            poolEl.textContent = `$${estimatedPool.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+        }
+
+        // Prize amounts per place
+        [1, 2, 3, 4, 5].forEach((i, idx) => {
+            const valEl = document.getElementById(`dist-val-${i}`);
+            if (valEl) {
+                const amount = estimatedPool * vals[idx] / 100;
+                valEl.textContent = amount > 0 ? `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '$0';
+            }
+        });
+    }
+
+    function setupToggle(num) {
+        const btn = document.getElementById(`toggle-dist-${num}`);
+        const inp = document.getElementById(`dist-${num}`);
+        const lbl = document.getElementById(`label-dist-${num}`);
+        if (!btn || !inp) return;
+
+        btn.addEventListener('click', () => {
+            const isEnabled = !inp.disabled;
+            if (isEnabled) {
+                // Disable
+                inp.disabled = true;
+                inp.value = 0;
+                inp.classList.add('text-slate-500');
+                inp.classList.remove('text-white');
+                if (lbl) lbl.style.opacity = '0.5';
+                btn.innerHTML = '<span class="material-icons text-[12px]">add</span>';
+                btn.classList.remove('text-red-400');
+                btn.classList.add('text-slate-500');
+            } else {
+                // Enable
+                inp.disabled = false;
+                if (lbl) lbl.style.opacity = '1';
+                inp.classList.remove('text-slate-500');
+                inp.classList.add('text-white');
+                btn.innerHTML = '<span class="material-icons text-[12px]">remove</span>';
+                btn.classList.add('text-red-400');
+                btn.classList.remove('text-slate-500');
+                inp.focus();
+            }
+            updatePoolDisplay();
+        });
+    }
+
+    // Wire inputs
+    document.querySelectorAll('.dist-input').forEach(inp => {
+        inp.addEventListener('input', updatePoolDisplay);
+    });
+    document.getElementById('entry-fee')?.addEventListener('input', updatePoolDisplay);
+
+    setupToggle(4);
+    setupToggle(5);
+    updatePoolDisplay();
 }
 
 // --- HOTFIX: Revert DemonSlayer ---
