@@ -268,50 +268,84 @@
                             value="50">
                     </div>
                     <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Distribución
-                                de Premios (%)</label>
-                            <span id="dist-error" class="text-[10px] font-bold text-red-400 hidden">¡Debe sumar 100%! (<span id="dist-sum">0</span>%)</span>
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Distribución de Premios</label>
+                            <span class="text-[10px] text-slate-600 italic">Cálculo automático</span>
                         </div>
-                        <div class="grid grid-cols-5 gap-2 mb-3">
+
+                        <!-- Pool Total -->
+                        <div class="bg-gradient-to-r from-accent-gold/10 to-transparent border border-accent-gold/20 rounded-xl p-3 mb-4 flex items-center justify-between">
                             <div>
-                                <input type="number" id="dist-1" min="0" max="100"
-                                    class="dist-input w-full bg-background-dark border border-white/10 rounded-lg px-1 py-2 text-center text-white focus:border-accent-gold transition-colors"
-                                    placeholder="1º" value="50">
-                                <span class="block text-[10px] text-center text-slate-500 mt-1">1º <span id="dist-val-1" class="text-accent-gold font-bold block mt-0.5">$0</span></span>
+                                <span class="text-[10px] text-slate-500 uppercase tracking-wider font-bold block">Bolsa Estimada</span>
+                                <span id="estimated-pool" class="text-2xl font-black text-accent-gold tracking-tight">$0</span>
                             </div>
-                            <div>
-                                <input type="number" id="dist-2" min="0" max="100"
-                                    class="dist-input w-full bg-background-dark border border-white/10 rounded-lg px-1 py-2 text-center text-white focus:border-slate-300 transition-colors"
-                                    placeholder="2º" value="30">
-                                <span class="block text-[10px] text-center text-slate-500 mt-1">2º <span id="dist-val-2" class="text-slate-300 font-bold block mt-0.5">$0</span></span>
-                            </div>
-                            <div>
-                                <input type="number" id="dist-3" min="0" max="100"
-                                    class="dist-input w-full bg-background-dark border border-white/10 rounded-lg px-1 py-2 text-center text-white focus:border-orange-400 transition-colors"
-                                    placeholder="3º" value="20">
-                                <span class="block text-[10px] text-center text-slate-500 mt-1">3º <span id="dist-val-3" class="text-orange-400 font-bold block mt-0.5">$0</span></span>
-                            </div>
-                            <div class="relative">
-                                <button type="button" id="toggle-dist-4" class="absolute -top-3 -right-2 w-5 h-5 rounded-full bg-surface border border-white/10 text-slate-500 hover:text-emerald-400 flex items-center justify-center z-10 transition-colors"><span class="material-icons text-[12px]">add</span></button>
-                                <input type="number" id="dist-4" min="0" max="100" disabled
-                                    class="dist-input w-full bg-background-dark border border-white/10 rounded-lg px-1 py-2 text-center text-slate-500 disabled:opacity-50 focus:border-blue-400 transition-colors"
-                                    placeholder="4º" value="0">
-                                <span class="block text-[10px] text-center text-slate-500 mt-1" id="label-dist-4" style="opacity:0.5;">4º <span id="dist-val-4" class="text-blue-400 font-bold block mt-0.5">$0</span></span>
-                            </div>
-                            <div class="relative">
-                                <button type="button" id="toggle-dist-5" class="absolute -top-3 -right-2 w-5 h-5 rounded-full bg-surface border border-white/10 text-slate-500 hover:text-emerald-400 flex items-center justify-center z-10 transition-colors"><span class="material-icons text-[12px]">add</span></button>
-                                <input type="number" id="dist-5" min="0" max="100" disabled
-                                    class="dist-input w-full bg-background-dark border border-white/10 rounded-lg px-1 py-2 text-center text-slate-500 disabled:opacity-50 focus:border-purple-400 transition-colors"
-                                    placeholder="5º" value="0">
-                                <span class="block text-[10px] text-center text-slate-500 mt-1" id="label-dist-5" style="opacity:0.5;">5º <span id="dist-val-5" class="text-purple-400 font-bold block mt-0.5">$0</span></span>
+                            <div class="text-right">
+                                <span class="text-[10px] text-slate-500 uppercase tracking-wider font-bold block">Participantes</span>
+                                <span id="pool-participants" class="text-lg font-black text-white">0</span>
                             </div>
                         </div>
-                        <div class="bg-background border border-white/5 rounded-lg p-3 text-center mt-3">
-                            <span class="text-xs text-slate-500 uppercase tracking-wider font-bold block mb-1">Monto Estimado de Bolsa</span>
-                            <span id="estimated-pool" class="text-xl font-black tracking-tight text-white">$0.00</span>
+
+                        <!-- Prize Cards -->
+                        <div class="space-y-2" id="prize-cards">
+
+                            <!-- 1° Lugar -->
+                            <div class="flex items-center justify-between bg-background-dark rounded-lg px-3 py-2.5 border border-accent-gold/30">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg leading-none">🥇</span>
+                                    <span class="text-sm font-bold text-white">1er Lugar</span>
+                                </div>
+                                <span id="dist-val-1" class="text-sm font-black text-accent-gold">$0</span>
+                            </div>
+
+                            <!-- 2° Lugar -->
+                            <div class="flex items-center justify-between bg-background-dark rounded-lg px-3 py-2.5 border border-slate-400/20">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg leading-none">🥈</span>
+                                    <span class="text-sm font-bold text-white">2do Lugar</span>
+                                </div>
+                                <span id="dist-val-2" class="text-sm font-black text-slate-300">$0</span>
+                            </div>
+
+                            <!-- 3° Lugar -->
+                            <div class="flex items-center justify-between bg-background-dark rounded-lg px-3 py-2.5 border border-orange-400/20">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg leading-none">🥉</span>
+                                    <span class="text-sm font-bold text-white">3er Lugar</span>
+                                </div>
+                                <span id="dist-val-3" class="text-sm font-black text-orange-400">$0</span>
+                            </div>
+
+                            <!-- 4° Lugar (toggle) -->
+                            <div id="card-dist-4" class="flex items-center justify-between bg-background-dark rounded-lg px-3 py-2.5 border border-white/5 opacity-40 transition-all duration-300">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base leading-none">4️⃣</span>
+                                    <span class="text-sm font-bold text-slate-400">4to Lugar</span>
+                                    <button type="button" id="toggle-dist-4"
+                                        class="ml-1 w-6 h-6 rounded-full bg-white/5 border border-white/10 text-slate-600 hover:text-emerald-400 hover:border-emerald-400/40 flex items-center justify-center transition-all"
+                                        title="Habilitar 4to lugar">
+                                        <span class="material-icons text-[12px]">add</span>
+                                    </button>
+                                </div>
+                                <span id="dist-val-4" class="text-sm font-black text-blue-400">–</span>
+                            </div>
+
+                            <!-- 5° Lugar (toggle) -->
+                            <div id="card-dist-5" class="flex items-center justify-between bg-background-dark rounded-lg px-3 py-2.5 border border-white/5 opacity-40 transition-all duration-300">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base leading-none">5️⃣</span>
+                                    <span class="text-sm font-bold text-slate-400">5to Lugar</span>
+                                    <button type="button" id="toggle-dist-5"
+                                        class="ml-1 w-6 h-6 rounded-full bg-white/5 border border-white/10 text-slate-600 hover:text-emerald-400 hover:border-emerald-400/40 flex items-center justify-center transition-all"
+                                        title="Habilitar 5to lugar">
+                                        <span class="material-icons text-[12px]">add</span>
+                                    </button>
+                                </div>
+                                <span id="dist-val-5" class="text-sm font-black text-purple-400">–</span>
+                            </div>
+
                         </div>
                     </div>
+
                     <div>
                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Registro de
                             Usuarios</label>

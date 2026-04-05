@@ -173,6 +173,8 @@ async function loadUsers() {
     console.log('[LOAD USERS] Test users:', users.filter(u => u.is_test).length);
 
     renderUsers();
+    // Refresh prize pool display now that users are loaded
+    if (typeof window._updatePrizeDisplay === 'function') window._updatePrizeDisplay();
 }
 
 async function loadMatches() {
@@ -665,34 +667,17 @@ async function loadSettings() {
         const distSetting = data.find(s => s.key === 'prize_distribution');
 
         if (feeSetting) document.getElementById('entry-fee').value = feeSetting.value;
-        if (distSetting && Array.isArray(distSetting.value)) {
-            if (distSetting.value[0] !== undefined) document.getElementById('dist-1').value = distSetting.value[0];
-            if (distSetting.value[1] !== undefined) document.getElementById('dist-2').value = distSetting.value[1];
-            if (distSetting.value[2] !== undefined) document.getElementById('dist-3').value = distSetting.value[2];
-            if (distSetting.value[3] !== undefined && distSetting.value[3] > 0) {
-                const inp4 = document.getElementById('dist-4');
-                inp4.disabled = false;
-                inp4.value = distSetting.value[3];
-                inp4.classList.remove('text-slate-500', 'disabled:opacity-50');
-                inp4.classList.add('text-white');
-                const lbl4 = document.getElementById('label-dist-4');
-                if (lbl4) lbl4.style.opacity = '1';
-                const btn4 = document.getElementById('toggle-dist-4');
-                if (btn4) { btn4.innerHTML = '<span class="material-icons text-[12px]">remove</span>'; btn4.classList.add('text-red-400'); btn4.classList.remove('text-slate-500'); }
-            }
-            if (distSetting.value[4] !== undefined && distSetting.value[4] > 0) {
-                const inp5 = document.getElementById('dist-5');
-                inp5.disabled = false;
-                inp5.value = distSetting.value[4];
-                inp5.classList.remove('text-slate-500', 'disabled:opacity-50');
-                inp5.classList.add('text-white');
-                const lbl5 = document.getElementById('label-dist-5');
-                if (lbl5) lbl5.style.opacity = '1';
-                const btn5 = document.getElementById('toggle-dist-5');
-                if (btn5) { btn5.innerHTML = '<span class="material-icons text-[12px]">remove</span>'; btn5.classList.add('text-red-400'); btn5.classList.remove('text-slate-500'); }
-            }
-        }
+
+        // Init the automatic prize calculator (no percentages needed)
         initPrizeDistributionUI();
+
+        // Restore enabled state for 4th/5th place from saved setting
+        const placesSetting = data.find(s => s.key === 'prize_places_enabled');
+        if (placesSetting && placesSetting.value) {
+            if (placesSetting.value.p4) document.getElementById('toggle-dist-4')?.click();
+            if (placesSetting.value.p5) document.getElementById('toggle-dist-5')?.click();
+        }
+
 
         const regEnabledSetting = data.find(s => s.key === 'registration_enabled');
         if (regEnabledSetting !== undefined) {
@@ -1419,23 +1404,17 @@ function setupEventListeners() {
     if (saveBtn) {
         saveBtn.onclick = async () => {
             const fee = document.getElementById('entry-fee').value;
-            const d1 = parseInt(document.getElementById('dist-1').value) || 0;
-            const d2 = parseInt(document.getElementById('dist-2').value) || 0;
-            const d3 = parseInt(document.getElementById('dist-3').value) || 0;
-            const inp4 = document.getElementById('dist-4');
-            const inp5 = document.getElementById('dist-5');
-            const d4 = inp4.disabled ? 0 : (parseInt(inp4.value) || 0);
-            const d5 = inp5.disabled ? 0 : (parseInt(inp5.value) || 0);
             const regEnabled = document.getElementById('reg-enabled').checked;
 
-            const total = d1 + d2 + d3 + d4 + d5;
-            if (total !== 100) {
-                alert(`❌ La distribución debe sumar 100%. Actualmente suma ${total}%.`);
-                return;
-            }
+            // Read which extra places are active (driven by the toggle state in initPrizeDistributionUI)
+            // We detect it by checking if the card border has been set (enabled)
+            const card4 = document.getElementById('card-dist-4');
+            const card5 = document.getElementById('card-dist-5');
+            const p4Enabled = card4 && !card4.classList.contains('opacity-40');
+            const p5Enabled = card5 && !card5.classList.contains('opacity-40');
 
             if (fee) await supabase.from('app_settings').upsert({ key: 'entry_fee', value: parseInt(fee) });
-            await supabase.from('app_settings').upsert({ key: 'prize_distribution', value: [d1, d2, d3, d4, d5] });
+            await supabase.from('app_settings').upsert({ key: 'prize_places_enabled', value: { p4: p4Enabled, p5: p5Enabled } });
             await supabase.from('app_settings').upsert({ key: 'registration_enabled', value: regEnabled });
 
             alert('✅ Configuración guardada');
@@ -1459,86 +1438,128 @@ function setupEventListeners() {
 }
 
 // --- Prize Distribution UI ---
+// Exposed globally so loadUsers can trigger refresh after users load
+window._updatePrizeDisplay = null;
+
 function initPrizeDistributionUI() {
-    const COLORS = ['text-accent-gold', 'text-slate-300', 'text-orange-400', 'text-blue-400', 'text-purple-400'];
-    const BORDER = ['border-accent-gold', 'border-slate-300', 'border-orange-400', 'border-blue-400', 'border-purple-400'];
+    let enable4 = false;
+    let enable5 = false;
 
-    function updatePoolDisplay() {
-        const fee = parseFloat(document.getElementById('entry-fee')?.value) || 0;
-        const vals = [1, 2, 3, 4, 5].map(i => {
-            const inp = document.getElementById(`dist-${i}`);
-            return inp && !inp.disabled ? (parseFloat(inp.value) || 0) : 0;
-        });
-        const total = vals.reduce((a, b) => a + b, 0);
+    /**
+     * Core calculation — automatic formula.
+     * 5th place = costoEntrada + 500 (base fija)
+     * Remaining pool split among top places with fixed proportions.
+     */
+    function calcPrizes(pool, fee, with4, with5) {
+        if (pool <= 0 || fee <= 0) return null;
+        const BONO_5 = 500;
+        const p5 = with5 ? fee + BONO_5 : 0;
+        const remanente = pool - p5;
+        if (remanente <= 0) return null;
 
-        // Sum validation indicator
-        const errEl = document.getElementById('dist-error');
-        const sumEl = document.getElementById('dist-sum');
-        if (errEl && sumEl) {
-            sumEl.textContent = total;
-            errEl.classList.toggle('hidden', total === 100);
+        // Proportions over remanente
+        let prop;
+        if (with5)       prop = { p1: 0.42, p2: 0.25, p3: 0.18, p4: 0.15 };
+        else if (with4)  prop = { p1: 0.47, p2: 0.29, p3: 0.24 };
+        else             prop = { p1: 0.50, p2: 0.32, p3: 0.18 };
+
+        let p1 = remanente * prop.p1;
+        let p2 = remanente * prop.p2;
+        let p3 = remanente * prop.p3;
+        let p4 = (with4 || with5) ? remanente * prop.p4 : 0;
+
+        // Guard: 4th must beat 5th
+        if (with5 && p4 <= p5) {
+            const deficit = p5 - p4 + 1;
+            const pool123 = p1 + p2 + p3;
+            const factor = (pool123 - deficit) / pool123;
+            p1 *= factor; p2 *= factor; p3 *= factor;
+            p4 += deficit;
         }
 
-        // Pool estimate: fee * real (non-test) users
-        const realUsers = (typeof users !== 'undefined') ? users.filter(u => !u.is_test).length : 0;
-        const estimatedPool = fee * realUsers;
-        const poolEl = document.getElementById('estimated-pool');
-        if (poolEl) {
-            poolEl.textContent = `$${estimatedPool.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
-        }
+        const r = (n) => Math.round(n * 100) / 100;
+        p1 = r(p1); p2 = r(p2); p3 = r(p3); p4 = r(p4);
+        const p5final = with5 ? r(pool - p1 - p2 - p3 - p4) : 0;
 
-        // Prize amounts per place
-        [1, 2, 3, 4, 5].forEach((i, idx) => {
-            const valEl = document.getElementById(`dist-val-${i}`);
-            if (valEl) {
-                const amount = estimatedPool * vals[idx] / 100;
-                valEl.textContent = amount > 0 ? `$${amount.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '$0';
-            }
-        });
+        return { p1, p2, p3, p4, p5: p5final };
     }
 
-    function setupToggle(num) {
-        const btn = document.getElementById(`toggle-dist-${num}`);
-        const inp = document.getElementById(`dist-${num}`);
-        const lbl = document.getElementById(`label-dist-${num}`);
-        if (!btn || !inp) return;
+    const fmt = (n) => n > 0
+        ? `$${n.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+        : '$0';
+
+    function updateDisplay() {
+        const fee = parseFloat(document.getElementById('entry-fee')?.value) || 0;
+        const realUsers = (typeof users !== 'undefined') ? users.filter(u => !u.is_test).length : 0;
+        const pool = fee * realUsers;
+
+        // Header pool
+        const poolEl = document.getElementById('estimated-pool');
+        const partEl = document.getElementById('pool-participants');
+        if (poolEl) poolEl.textContent = pool > 0 ? fmt(pool) : '$0';
+        if (partEl) partEl.textContent = realUsers;
+
+        const prizes = calcPrizes(pool, fee, enable4, enable5);
+
+        const setVal = (id, val, fallback = '–') => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = prizes ? fmt(val) : fallback;
+        };
+
+        if (prizes) {
+            setVal('dist-val-1', prizes.p1);
+            setVal('dist-val-2', prizes.p2);
+            setVal('dist-val-3', prizes.p3);
+            document.getElementById('dist-val-4').textContent = (enable4 || enable5) ? fmt(prizes.p4) : '–';
+            document.getElementById('dist-val-5').textContent = enable5 ? fmt(prizes.p5) : '–';
+        } else {
+            ['dist-val-1','dist-val-2','dist-val-3'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.textContent = '$0';
+            });
+            ['dist-val-4','dist-val-5'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.textContent = '–';
+            });
+        }
+    }
+
+    // Expose so loadUsers can call it after users are fetched
+    window._updatePrizeDisplay = updateDisplay;
+
+    function setupToggle(num, getter, setter) {
+        const btn  = document.getElementById(`toggle-dist-${num}`);
+        const card = document.getElementById(`card-dist-${num}`);
+        if (!btn) return;
 
         btn.addEventListener('click', () => {
-            const isEnabled = !inp.disabled;
-            if (isEnabled) {
-                // Disable
-                inp.disabled = true;
-                inp.value = 0;
-                inp.classList.add('text-slate-500');
-                inp.classList.remove('text-white');
-                if (lbl) lbl.style.opacity = '0.5';
-                btn.innerHTML = '<span class="material-icons text-[12px]">add</span>';
-                btn.classList.remove('text-red-400');
-                btn.classList.add('text-slate-500');
-            } else {
-                // Enable
-                inp.disabled = false;
-                if (lbl) lbl.style.opacity = '1';
-                inp.classList.remove('text-slate-500');
-                inp.classList.add('text-white');
-                btn.innerHTML = '<span class="material-icons text-[12px]">remove</span>';
-                btn.classList.add('text-red-400');
-                btn.classList.remove('text-slate-500');
-                inp.focus();
+            const nowEnabled = !getter();
+            setter(nowEnabled);
+
+            // Card style
+            if (card) {
+                card.classList.toggle('opacity-40', !nowEnabled);
+                card.style.borderColor = nowEnabled
+                    ? (num === 4 ? 'rgba(96,165,250,0.35)' : 'rgba(192,132,252,0.35)')
+                    : '';
             }
-            updatePoolDisplay();
+            // Button icon
+            btn.innerHTML = nowEnabled
+                ? '<span class="material-icons text-[12px]">remove</span>'
+                : '<span class="material-icons text-[12px]">add</span>';
+            btn.classList.toggle('text-red-400', nowEnabled);
+            btn.classList.toggle('text-slate-600', !nowEnabled);
+
+            updateDisplay();
         });
     }
 
-    // Wire inputs
-    document.querySelectorAll('.dist-input').forEach(inp => {
-        inp.addEventListener('input', updatePoolDisplay);
-    });
-    document.getElementById('entry-fee')?.addEventListener('input', updatePoolDisplay);
+    setupToggle(4, () => enable4, (v) => { enable4 = v; });
+    setupToggle(5, () => enable5, (v) => { enable5 = v; });
 
-    setupToggle(4);
-    setupToggle(5);
-    updatePoolDisplay();
+    // Auto-update on entry fee change (covers user comment: cambiar cuota actualiza todo)
+    document.getElementById('entry-fee')?.addEventListener('input', updateDisplay);
+
+    updateDisplay();
 }
 
 // --- HOTFIX: Revert DemonSlayer ---
