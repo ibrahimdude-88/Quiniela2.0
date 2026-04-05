@@ -1490,7 +1490,7 @@ function initPrizeDistributionUI() {
 
     function updateDisplay() {
         const fee = parseFloat(document.getElementById('entry-fee')?.value) || 0;
-        const realUsers = (typeof users !== 'undefined') ? users.filter(u => !u.is_test).length : 0;
+        const realUsers = (typeof users !== 'undefined') ? users.length : 0;
         const pool = fee * realUsers;
 
         // Header pool
