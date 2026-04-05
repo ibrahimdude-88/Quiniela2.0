@@ -1457,12 +1457,11 @@ function initPrizeDistributionUI() {
         const remanente = pool - p5;
         if (remanente <= 0) return null;
 
-        // Proportions over remanente — each config must be strictly descending
-        // AND: 3rd with 4 places < 3rd with 3 places, etc.
+        // Proportions — smaller gap between 1st and the rest, strictly descending
         let prop;
-        if (with5)       prop = { p1: 0.42, p2: 0.25, p3: 0.18, p4: 0.15 }; // sum=1.00
-        else if (with4)  prop = { p1: 0.45, p2: 0.27, p3: 0.16, p4: 0.12 }; // sum=1.00 | p3(16%)<p3_3way(18%)
-        else             prop = { p1: 0.50, p2: 0.32, p3: 0.18 };            // sum=1.00 (base)
+        if (with5)       prop = { p1: 0.38, p2: 0.26, p3: 0.20, p4: 0.16 }; // sum=1.00
+        else if (with4)  prop = { p1: 0.40, p2: 0.28, p3: 0.20, p4: 0.12 }; // sum=1.00
+        else             prop = { p1: 0.45, p2: 0.35, p3: 0.20 };            // sum=1.00
 
         let p1 = remanente * prop.p1;
         let p2 = remanente * prop.p2;
