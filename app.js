@@ -240,49 +240,64 @@ async function updatePrizePool() {
             .from('app_settings')
             .select('*');
 
-        let entryFee = 50; // Default
-        let distribution = [50, 30, 20]; // Default
-
+        let entryFee = 50; // default
+        let placesEnabled = { p4: false, p5: false };
         if (!settingsError && settings) {
             const fee = settings.find(s => s.key === 'entry_fee');
             if (fee) entryFee = fee.value;
-
-            const dist = settings.find(s => s.key === 'prize_distribution');
-            if (dist && Array.isArray(dist.value)) distribution = dist.value;
+            const places = settings.find(s => s.key === 'prize_places_enabled');
+            if (places && places.value) placesEnabled = places.value;
         }
 
-        // Get count of paid users
+        // Count paid users (or all users if you prefer)
         const { count, error: countError } = await supabase
             .from('profiles')
             .select('*', { count: 'exact', head: true })
             .eq('paid', true);
-
         const paidUsers = count || 0;
         const totalPrize = paidUsers * entryFee;
 
-        const p1 = Math.floor(totalPrize * (distribution[0] / 100));
-        const p2 = Math.floor(totalPrize * (distribution[1] / 100));
-        const p3 = Math.floor(totalPrize * (distribution[2] / 100));
+        // ---- Prize calculation (same as admin) ----
+        const BONO_5 = 500;
+        const p5 = placesEnabled.p5 ? entryFee + BONO_5 : 0;
+        const remanente = totalPrize - p5;
+        if (remanente <= 0) return;
+        let prop;
+        if (placesEnabled.p5) prop = { p1: 0.38, p2: 0.26, p3: 0.20, p4: 0.16 };
+        else if (placesEnabled.p4) prop = { p1: 0.40, p2: 0.28, p3: 0.20, p4: 0.12 };
+        else prop = { p1: 0.45, p2: 0.35, p3: 0.20 };
+        let p1 = remanente * prop.p1;
+        let p2 = remanente * prop.p2;
+        let p3 = remanente * prop.p3;
+        let p4 = (placesEnabled.p4 || placesEnabled.p5) ? remanente * (prop.p4 || 0) : 0;
+        // Guard: 4th > 5th
+        if (placesEnabled.p5 && p4 <= p5) {
+            const deficit = p5 - p4 + 1;
+            const pool123 = p1 + p2 + p3;
+            const factor = (pool123 - deficit) / pool123;
+            p1 *= factor; p2 *= factor; p3 *= factor; p4 += deficit;
+        }
+        const r = n => Math.round(n * 100) / 100;
+        p1 = r(p1); p2 = r(p2); p3 = r(p3); p4 = r(p4);
+        const p5final = placesEnabled.p5 ? r(totalPrize - p1 - p2 - p3 - p4) : 0;
 
-        // Update UI (Hero Section)
+        // ---- UI update ----
         const prizeTotalEl = document.getElementById('hero-prize-total');
-        if (prizeTotalEl) prizeTotalEl.textContent = `$${totalPrize}`;
+        if (prizeTotalEl) prizeTotalEl.textContent = `$${totalPrize.toLocaleString('es-MX')}`;
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = `$${val}`; };
+        set('prize-1', p1);
+        set('prize-2', p2);
+        set('prize-3', p3);
+        if (placesEnabled.p4) set('prize-4', p4);
+        if (placesEnabled.p5) set('prize-5', p5final);
 
-        const elP1 = document.getElementById('prize-1');
-        const elP2 = document.getElementById('prize-2');
-        const elP3 = document.getElementById('prize-3');
-
-        if (elP1) elP1.textContent = `$${p1}`;
-        if (elP2) elP2.textContent = `$${p2}`;
-        if (elP3) elP3.textContent = `$${p3}`;
-
-        // Also update the percentage labels to match DB values
-        const elL1 = document.getElementById('prize-label-1');
-        const elL2 = document.getElementById('prize-label-2');
-        const elL3 = document.getElementById('prize-label-3');
-        if (elL1) elL1.textContent = `1er (${distribution[0]}%)`;
-        if (elL2) elL2.textContent = `2do (${distribution[1]}%)`;
-        if (elL3) elL3.textContent = `3er (${distribution[2]}%)`;
+        // Labels (percentages are no longer stored, we show static text)
+        const lbl = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+        lbl('prize-label-1', '1er');
+        lbl('prize-label-2', '2do');
+        lbl('prize-label-3', '3er');
+        if (placesEnabled.p4) lbl('prize-label-4', '4to');
+        if (placesEnabled.p5) lbl('prize-label-5', '5to');
 
     } catch (err) {
         console.error('Error updating prize pool:', err);
