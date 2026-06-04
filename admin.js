@@ -1625,8 +1625,8 @@ window.openDeletePredictionsModal = async () => {
     const modal = document.getElementById('delete-predictions-modal');
     modal.classList.remove('hidden');
     setTimeout(() => {
+        modal.classList.remove('opacity-0', 'pointer-events-none');
         modal.style.opacity = '1';
-        modal.classList.remove('pointer-events-none');
         modal.querySelector('div').classList.remove('scale-95');
         modal.querySelector('div').classList.add('scale-100');
     }, 10);
@@ -1638,7 +1638,7 @@ window.openDeletePredictionsModal = async () => {
 window.closeDeleteModal = () => {
     const modal = document.getElementById('delete-predictions-modal');
     modal.style.opacity = '0';
-    modal.classList.add('pointer-events-none');
+    modal.classList.add('opacity-0', 'pointer-events-none');
     modal.querySelector('div').classList.remove('scale-100');
     modal.querySelector('div').classList.add('scale-95');
     setTimeout(() => {
@@ -1721,10 +1721,12 @@ window.confirmDeletePredictions = async () => {
 
         if (matchIds.length === 0) return alert('No hay partidos en esta jornada');
 
-        const { error } = await supabase.from('predictions').delete().eq('user_id', userId).in('match_id', matchIds);
+        const { error } = await supabaseAdmin.from('predictions').delete().eq('user_id', userId).in('match_id', matchIds);
 
         if (error) alert('Error al eliminar: ' + error.message);
         else {
+            await updateAllProfilesPoints();
+            await loadUsers();
             alert('Pronósticos eliminados correctamente.');
             closeDeleteModal();
         }
@@ -1733,10 +1735,12 @@ window.confirmDeletePredictions = async () => {
         const gameText = document.getElementById('delete-game-select').selectedOptions[0].text;
         if (!confirm(`¿Estás seguro de eliminar el pronóstico de ${gameText} para ${userName}?`)) return;
 
-        const { error } = await supabase.from('predictions').delete().eq('user_id', userId).eq('match_id', gameId);
+        const { error } = await supabaseAdmin.from('predictions').delete().eq('user_id', userId).eq('match_id', gameId);
 
         if (error) alert('Error al eliminar: ' + error.message);
         else {
+            await updateAllProfilesPoints();
+            await loadUsers();
             alert('Pronóstico eliminado correctamente.');
             closeDeleteModal();
         }

@@ -27,6 +27,51 @@ const getFlagUrl = (teamCode) => {
     return `https://flagcdn.com/w80/${code}.png`;
 };
 
+const TEAM_NAMES = {
+    'MEX': 'México', 'BRA': 'Brasil', 'ARG': 'Argentina', 'USA': 'Estados Unidos', 'CAN': 'Canadá',
+    'ESP': 'España', 'FRA': 'Francia', 'GER': 'Alemania', 'ENG': 'Inglaterra', 'POR': 'Portugal',
+    'NED': 'Países Bajos', 'BEL': 'Bélgica', 'CRO': 'Croacia', 'URU': 'Uruguay', 'KOR': 'Corea del Sur',
+    'JPN': 'Japón', 'SEN': 'Senegal', 'MAR': 'Marruecos', 'SUI': 'Suiza', 'GHA': 'Ghana',
+    'CMR': 'Camerún', 'ECU': 'Ecuador', 'KSA': 'Arabia Saudita', 'IRN': 'Irán', 'AUS': 'Australia',
+    'CRC': 'Costa Rica', 'POL': 'Polonia', 'TUN': 'Túnez', 'DEN': 'Dinamarca', 'SRB': 'Serbia',
+    'WAL': 'Gales', 'QAT': 'Qatar', 'RSA': 'Sudáfrica', 'PAR': 'Paraguay', 'SCO': 'Escocia',
+    'CIV': 'Costa de Marfil', 'COL': 'Colombia', 'PAN': 'Panamá', 'AUT': 'Austria', 'ALG': 'Argelia',
+    'JOR': 'Jordania', 'NZL': 'Nueva Zelanda', 'EGY': 'Egipto', 'UZB': 'Uzbekistán', 'HAI': 'Haití',
+    'CUR': 'Curazao', 'NOR': 'Noruega',
+    'CPV': 'Cabo Verde', 'COD': 'RD Congo', 'IRQ': 'Irak', 'BIH': 'Bosnia y Herz.', 'SWE': 'Suecia', 'TUR': 'Turquía', 'CZE': 'Rep. Checa'
+};
+
+function friendlyTeamLabel(code) {
+    if (!code) return 'Por definir';
+    if (code === 'TBD') return 'Por definir';
+    if (TEAM_NAMES[code]) return TEAM_NAMES[code];
+    
+    // Placeholder formats
+    if (code.startsWith('W')) {
+        return 'Ganador #' + code.substring(1);
+    }
+    if (code.startsWith('L')) {
+        return 'Perdedor #' + code.substring(1);
+    }
+    if (code.length > 3) {
+        const match = code.match(/^3([A-L]+)$/);
+        if (match) {
+            return `3er Lugar (Grp. ${match[1].split('').join('/')})`;
+        }
+    }
+    return code;
+}
+
+window.toggleTeamName = (code, spanId) => {
+    const el = document.getElementById(spanId);
+    if (!el) return;
+    if (el.textContent === code) {
+        el.textContent = friendlyTeamLabel(code);
+    } else {
+        el.textContent = code;
+    }
+};
+
 // Initialize
 async function init() {
     console.log('[INIT] Starting initialization...');
@@ -495,17 +540,17 @@ function renderMatches() {
 
                 htmlContent += `
                 <div class="flex items-center justify-between p-4 bg-surface-dark rounded-xl border border-white/5 transition-colors hover:bg-white/5 mx-2">
-                    <div class="flex items-center gap-4 w-1/3">
+                    <div class="flex items-center gap-4 w-1/3 cursor-pointer select-none" onclick="toggleTeamName('${match.home_team}', 'sched-home-${match.id}')">
                         <img src="${getFlagUrl(match.home_team)}" class="w-8 h-8 rounded-full shadow-md object-cover">
-                        <span class="font-bold text-slate-200 text-sm md:text-base truncate">${match.home_team}</span>
+                        <span id="sched-home-${match.id}" class="font-bold text-slate-200 text-sm md:text-base truncate">${match.home_team}</span>
                     </div>
                     <div class="flex flex-col items-center w-1/3 min-w-[80px]">
                         <span class="text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-800 px-2 py-0.5 rounded border border-white/5">${timeStr}</span>
                         <span class="text-[10px] text-slate-600 mt-1 truncate max-w-full">${match.stadium || 'Estadio'}</span>
                         <span class="text-[10px] text-slate-400 capitalize truncate w-full text-center">${dateStr}</span>
                     </div>
-                    <div class="flex items-center justify-end gap-4 w-1/3">
-                        <span class="font-bold text-slate-200 text-sm md:text-base truncate text-right">${match.away_team}</span>
+                    <div class="flex items-center justify-end gap-4 w-1/3 cursor-pointer select-none" onclick="toggleTeamName('${match.away_team}', 'sched-away-${match.id}')">
+                        <span id="sched-away-${match.id}" class="font-bold text-slate-200 text-sm md:text-base truncate text-right">${match.away_team}</span>
                         <img src="${getFlagUrl(match.away_team)}" class="w-8 h-8 rounded-full shadow-md object-cover">
                     </div>
                 </div>`;
@@ -648,10 +693,10 @@ function renderMatches() {
                     <div class="flex flex-col md:flex-row items-center justify-between gap-6">
                         <div class="flex-1 flex items-center justify-center md:justify-between w-full gap-4 md:gap-8">
                           <div class="flex flex-col items-center gap-3 w-24 md:w-28">
-                            <div class="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-slate-700 shadow-xl relative bg-slate-800 group-hover:border-primary/50 transition-colors">
+                            <div onclick="toggleTeamName('${match.home_team}', 'pred-name-home-${match.id}')" class="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-slate-700 shadow-xl relative bg-slate-800 group-hover:border-primary/50 transition-colors cursor-pointer select-none">
                                  <img src="${getFlagUrl(match.home_team)}" alt="${match.home_team}" class="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500">
                             </div>
-                            <span class="font-bold text-xs md:text-sm tracking-wider text-slate-300 truncate max-w-full text-center">${match.home_team}</span>
+                            <span id="pred-name-home-${match.id}" onclick="toggleTeamName('${match.home_team}', 'pred-name-home-${match.id}')" class="font-bold text-xs md:text-sm tracking-wider text-slate-300 truncate max-w-full text-center cursor-pointer select-none">${match.home_team}</span>
                           </div>
                 
                           <div class="flex items-center gap-2 md:gap-4 relative">
@@ -679,10 +724,10 @@ function renderMatches() {
                           </div>
                 
                            <div class="flex flex-col items-center gap-3 w-24 md:w-28">
-                            <div class="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-slate-700 shadow-xl relative bg-slate-800 group-hover:border-primary/50 transition-colors">
+                            <div onclick="toggleTeamName('${match.away_team}', 'pred-name-away-${match.id}')" class="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-slate-700 shadow-xl relative bg-slate-800 group-hover:border-primary/50 transition-colors cursor-pointer select-none">
                                  <img src="${getFlagUrl(match.away_team)}" alt="${match.away_team}" class="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500">
                             </div>
-                            <span class="font-bold text-xs md:text-sm tracking-wider text-slate-300 truncate max-w-full text-center">${match.away_team}</span>
+                            <span id="pred-name-away-${match.id}" onclick="toggleTeamName('${match.away_team}', 'pred-name-away-${match.id}')" class="font-bold text-xs md:text-sm tracking-wider text-slate-300 truncate max-w-full text-center cursor-pointer select-none">${match.away_team}</span>
                           </div>
                         </div>
                 
