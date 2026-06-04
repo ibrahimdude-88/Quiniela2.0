@@ -698,19 +698,19 @@ function renderMatches() {
                 }
 
                 const html = `
-                  <div class="bg-surface-dark rounded-2xl p-5 border ${hasPrediction || unsaved ? 'border-primary/20 bg-primary/[0.02]' : 'border-white/5'} flex flex-col transition-all hover:bg-white/[0.02] group relative overflow-hidden mb-4">
+                  <div class="bg-surface-dark rounded-2xl p-3 md:p-5 border ${hasPrediction || unsaved ? 'border-primary/20 bg-primary/[0.02]' : 'border-white/5'} flex flex-col transition-all hover:bg-white/[0.02] group relative overflow-hidden mb-4">
                     ${hasPrediction || unsaved ? '<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-primary/10 to-transparent pointer-events-none"></div>' : ''}
             
-                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div class="flex-1 flex items-center justify-center md:justify-between w-full gap-4 md:gap-8">
-                          <div class="flex flex-col items-center gap-3 w-24 md:w-28">
-                            <div onclick="toggleTeamName('${match.home_team}', 'pred-name-home-${match.id}')" class="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-slate-700 shadow-xl relative bg-slate-800 group-hover:border-primary/50 transition-colors cursor-pointer select-none">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-6">
+                        <div class="flex-1 flex items-center justify-between w-full gap-1.5 md:gap-8">
+                          <div class="flex flex-col items-center gap-2 w-16 md:w-28 min-w-0">
+                            <div onclick="toggleTeamName('${match.home_team}', 'pred-name-home-${match.id}')" class="w-10 h-10 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-slate-700 shadow-xl relative bg-slate-800 group-hover:border-primary/50 transition-colors cursor-pointer select-none flex-shrink-0">
                                  <img src="${getFlagUrl(match.home_team)}" alt="${match.home_team}" class="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500">
                             </div>
-                            <span id="pred-name-home-${match.id}" onclick="toggleTeamName('${match.home_team}', 'pred-name-home-${match.id}')" class="font-bold text-xs md:text-sm tracking-wider text-slate-300 truncate max-w-full text-center cursor-pointer select-none">${match.home_team}</span>
+                            <span id="pred-name-home-${match.id}" onclick="toggleTeamName('${match.home_team}', 'pred-name-home-${match.id}')" class="font-bold text-[10px] md:text-sm tracking-wider text-slate-300 truncate max-w-full text-center cursor-pointer select-none">${match.home_team}</span>
                           </div>
                 
-                          <div class="flex items-center gap-3 relative">
+                          <div class="flex items-center gap-1.5 md:gap-3 relative flex-shrink-0">
                             ${(match.home_score !== null && match.away_score !== null) ? `
                                 <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-background-dark border border-primary/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-xl pointer-events-none z-20 whitespace-nowrap">
                                     <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Real</span>
@@ -719,14 +719,14 @@ function renderMatches() {
                             ` : ''}
                             
                             <!-- Home score adjuster -->
-                            <div class="flex items-center gap-1">
+                            <div class="flex items-center gap-0.5 md:gap-1">
                                 ${!inputsDisabled ? `
-                                    <button type="button" onclick="adjustValue(${match.id}, 'home', -1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
-                                        <span class="material-icons text-xs font-black">remove</span>
+                                    <button type="button" onclick="adjustValue(${match.id}, 'home', -1)" class="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
+                                        <span class="material-icons text-[10px] md:text-xs font-black">remove</span>
                                     </button>
                                 ` : ''}
                                 <input id="pred-home-${match.id}" 
-                                       class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-background-dark border-2 border-slate-700/50 text-center text-lg md:text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
+                                       class="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-background-dark border border-slate-700/50 text-center text-sm md:text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
                                        type="${inputType}" 
                                        value="${displayHomeScore}" 
                                        ${inputsDisabled ? 'disabled' : ''}
@@ -735,23 +735,23 @@ function renderMatches() {
                                        pattern="[0-9]*"
                                        inputmode="numeric"/>
                                 ${!inputsDisabled ? `
-                                    <button type="button" onclick="adjustValue(${match.id}, 'home', 1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
-                                        <span class="material-icons text-xs font-black">add</span>
+                                    <button type="button" onclick="adjustValue(${match.id}, 'home', 1)" class="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
+                                        <span class="material-icons text-[10px] md:text-xs font-black">add</span>
                                     </button>
                                 ` : ''}
                             </div>
 
-                            <span class="text-slate-600 font-black text-sm select-none mx-0.5">vs</span>
+                            <span class="text-slate-600 font-black text-xs md:text-sm select-none mx-0.5">vs</span>
 
                             <!-- Away score adjuster -->
-                            <div class="flex items-center gap-1">
+                            <div class="flex items-center gap-0.5 md:gap-1">
                                 ${!inputsDisabled ? `
-                                    <button type="button" onclick="adjustValue(${match.id}, 'away', -1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
-                                        <span class="material-icons text-xs font-black">remove</span>
+                                    <button type="button" onclick="adjustValue(${match.id}, 'away', -1)" class="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
+                                        <span class="material-icons text-[10px] md:text-xs font-black">remove</span>
                                     </button>
                                 ` : ''}
                                 <input id="pred-away-${match.id}" 
-                                       class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-background-dark border-2 border-slate-700/50 text-center text-lg md:text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
+                                       class="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-background-dark border border-slate-700/50 text-center text-sm md:text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
                                        type="${inputType}" 
                                        value="${displayAwayScore}" 
                                        ${inputsDisabled ? 'disabled' : ''}
@@ -760,18 +760,18 @@ function renderMatches() {
                                        pattern="[0-9]*"
                                        inputmode="numeric"/>
                                 ${!inputsDisabled ? `
-                                    <button type="button" onclick="adjustValue(${match.id}, 'away', 1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
-                                        <span class="material-icons text-xs font-black">add</span>
+                                    <button type="button" onclick="adjustValue(${match.id}, 'away', 1)" class="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
+                                        <span class="material-icons text-[10px] md:text-xs font-black">add</span>
                                     </button>
                                 ` : ''}
                             </div>
                           </div>
                 
-                           <div class="flex flex-col items-center gap-3 w-24 md:w-28">
-                            <div onclick="toggleTeamName('${match.away_team}', 'pred-name-away-${match.id}')" class="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-slate-700 shadow-xl relative bg-slate-800 group-hover:border-primary/50 transition-colors cursor-pointer select-none">
+                           <div class="flex flex-col items-center gap-2 w-16 md:w-28 min-w-0">
+                            <div onclick="toggleTeamName('${match.away_team}', 'pred-name-away-${match.id}')" class="w-10 h-10 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-slate-700 shadow-xl relative bg-slate-800 group-hover:border-primary/50 transition-colors cursor-pointer select-none flex-shrink-0">
                                  <img src="${getFlagUrl(match.away_team)}" alt="${match.away_team}" class="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500">
                             </div>
-                            <span id="pred-name-away-${match.id}" onclick="toggleTeamName('${match.away_team}', 'pred-name-away-${match.id}')" class="font-bold text-xs md:text-sm tracking-wider text-slate-300 truncate max-w-full text-center cursor-pointer select-none">${match.away_team}</span>
+                            <span id="pred-name-away-${match.id}" onclick="toggleTeamName('${match.away_team}', 'pred-name-away-${match.id}')" class="font-bold text-[10px] md:text-sm tracking-wider text-slate-300 truncate max-w-full text-center cursor-pointer select-none">${match.away_team}</span>
                           </div>
                         </div>
                 
