@@ -156,6 +156,54 @@
                 background-position: 200% 50%;
             }
         }
+
+        /* Cup Animations for Ranking Modal */
+        @keyframes gold-crown-glow {
+            0%, 100% {
+                filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.4));
+                transform: scale(1) rotate(0deg);
+            }
+            50% {
+                filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.8));
+                transform: scale(1.18) rotate(6deg);
+            }
+        }
+        @keyframes silver-glow-anim {
+            0%, 100% {
+                filter: drop-shadow(0 0 2px rgba(203, 213, 225, 0.3));
+                transform: translateY(0);
+            }
+            50% {
+                filter: drop-shadow(0 0 8px rgba(203, 213, 225, 0.6));
+                transform: translateY(-3px);
+            }
+        }
+        @keyframes bronze-glow-anim {
+            0%, 100% {
+                filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.2));
+                transform: scale(1);
+            }
+            50% {
+                filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.5));
+                transform: scale(1.08);
+            }
+        }
+
+        .rank-cup-gold {
+            animation: gold-crown-glow 2s infinite ease-in-out;
+            color: #fbbf24 !important;
+            display: inline-block;
+        }
+        .rank-cup-silver {
+            animation: silver-glow-anim 2s infinite ease-in-out;
+            color: #cbd5e1 !important;
+            display: inline-block;
+        }
+        .rank-cup-bronze {
+            animation: bronze-glow-anim 2s infinite ease-in-out;
+            color: #f97316 !important;
+            display: inline-block;
+        }
     </style>
     <!-- Confetti Logic -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
