@@ -638,22 +638,62 @@ async function calculatePointsManually(matchId, homeScore, awayScore) {
     const { data: preds } = await supabase.from('predictions').select('*').eq('match_id', matchId);
     if (!preds) return;
 
-    for (const p of preds) {
-        let pts = 0;
-        if (p.home_score === homeScore && p.away_score === awayScore) {
-            pts = 8;
-        } else {
-            const realDiff = homeScore - awayScore;
-            const predDiff = p.home_score - p.away_score;
-            const realWinner = Math.sign(realDiff);
-            const predWinner = Math.sign(predDiff);
+    const match = matches.find(m => m.id === matchId);
+    const isKnockout = match ? (match.matchday >= 4) : false;
+    const penaltyWinner = match ? match.penalty_winner : null;
 
-            if (realWinner === predWinner) {
-                pts = (realDiff === predDiff) ? 5 : 3;
+    let matchWinnerSign = 0;
+    if (homeScore > awayScore) {
+        matchWinnerSign = 1;
+    } else if (homeScore < awayScore) {
+        matchWinnerSign = -1;
+    } else {
+        if (isKnockout) {
+            if (penaltyWinner === 'home') matchWinnerSign = 1;
+            else if (penaltyWinner === 'away') matchWinnerSign = -1;
+        }
+    }
+
+    for (const p of preds) {
+        if (p.home_score === null || p.away_score === null) continue;
+
+        let predWinnerSign = 0;
+        const pH = Number(p.home_score);
+        const pA = Number(p.away_score);
+
+        if (pH > pA) {
+            predWinnerSign = 1;
+        } else if (pH < pA) {
+            predWinnerSign = -1;
+        } else {
+            if (isKnockout) {
+                if (p.penalty_winner === 'home') predWinnerSign = 1;
+                else if (p.penalty_winner === 'away') predWinnerSign = -1;
             }
         }
 
-        await supabase.from('predictions').update({ points_earned: pts }).eq('id', p.id);
+        let pts = 0;
+        // 1. Correct Outcome (3 Points)
+        if (predWinnerSign === matchWinnerSign && matchWinnerSign !== 0) {
+            pts += 3;
+        } else if (matchWinnerSign === 0 && predWinnerSign === 0) {
+            pts += 3;
+        }
+
+        // 2. Exact Score (+5 Points)
+        if (pH === homeScore && pA === awayScore) {
+            if (homeScore === awayScore) {
+                if (penaltyWinner === p.penalty_winner) {
+                    pts += 5;
+                }
+            } else {
+                pts += 5;
+            }
+        }
+
+        if (pts !== p.points_earned) {
+            await supabase.from('predictions').update({ points_earned: pts }).eq('id', p.id);
+        }
     }
 }
 

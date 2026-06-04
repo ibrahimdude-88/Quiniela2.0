@@ -612,8 +612,10 @@ function renderMatches() {
 
                 if (isKnockout) {
                     const predPenalty = prediction?.penalty_winner;
+                    const isTie = prediction && prediction.home_score !== null && prediction.away_score !== null && parseInt(prediction.home_score) === parseInt(prediction.away_score);
+                    const containerVisibilityClass = isTie ? '' : 'hidden opacity-0 pointer-events-none';
                     penaltyHtml = `
-                        <div class="mt-4 pt-4 border-t border-white/5 w-full flex flex-col items-center gap-2">
+                        <div id="penalty-container-user-${match.id}" class="mt-4 pt-4 border-t border-white/5 w-full flex flex-col items-center gap-2 transition-all duration-300 ${containerVisibilityClass}">
                              <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Ganador en Penales (Si hay empate)</span>
                              <div class="flex items-center gap-4">
                                 <label class="flex items-center gap-2 cursor-pointer bg-black/20 px-3 py-1.5 rounded-lg border border-white/5 hover:bg-white/5 transition-colors">
@@ -653,11 +655,18 @@ function renderMatches() {
                           </div>
                 
                           <div class="flex items-center gap-2 md:gap-4 relative">
+                            ${(match.home_score !== null && match.away_score !== null) ? `
+                                <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-background-dark border border-primary/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-xl pointer-events-none z-20 whitespace-nowrap">
+                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Real</span>
+                                    <span class="text-xs font-mono font-extrabold text-primary tracking-widest">${match.home_score} : ${match.away_score}</span>
+                                </div>
+                            ` : ''}
                             <input id="pred-home-${match.id}" 
                                    class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-background-dark border-2 border-slate-700/50 text-center text-xl md:text-2xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
                                    type="${inputType}" 
                                    value="${displayHomeScore}" 
                                    ${inputsDisabled ? 'disabled' : ''}
+                                   oninput="updatePenaltyContainer(${match.id})"
                                    placeholder="${placeholder}"/>
                             <span class="text-slate-600 font-black text-lg md:text-xl select-none">vs</span>
                             <input id="pred-away-${match.id}" 
@@ -665,6 +674,7 @@ function renderMatches() {
                                    type="${inputType}" 
                                    value="${displayAwayScore}" 
                                    ${inputsDisabled ? 'disabled' : ''}
+                                   oninput="updatePenaltyContainer(${match.id})"
                                    placeholder="${placeholder}"/>
                           </div>
                 
@@ -696,6 +706,26 @@ function renderMatches() {
 
     console.log('[RENDER] Matches rendered successfully');
 }
+
+
+window.updatePenaltyContainer = (matchId) => {
+    const homeInput = document.getElementById(`pred-home-${matchId}`);
+    const awayInput = document.getElementById(`pred-away-${matchId}`);
+    const penaltyContainer = document.getElementById(`penalty-container-user-${matchId}`);
+
+    if (homeInput && awayInput && penaltyContainer) {
+        const h = parseInt(homeInput.value);
+        const a = parseInt(awayInput.value);
+
+        if (!isNaN(h) && !isNaN(a) && h === a) {
+            penaltyContainer.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+        } else {
+            penaltyContainer.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+            // Uncheck radios
+            document.querySelectorAll(`input[name="penalty-${matchId}"]`).forEach(r => r.checked = false);
+        }
+    }
+};
 
 function setupEventListeners() {
     console.log('[EVENTS] Setting up event listeners');
