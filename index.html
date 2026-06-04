@@ -199,17 +199,19 @@
 
     <main class="container mx-auto px-6 py-8">
         <!-- Hero Section -->
-        <div class="relative rounded-3xl overflow-hidden mb-10 p-8 md:p-12">
-            <!-- Background with Gradient & Mesh -->
-            <div class="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800 z-0"></div>
-            <div
-                class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 z-0 mix-blend-overlay">
-            </div>
-            <div
-                class="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 z-0">
-            </div>
-            <div
-                class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-accent-gold/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 z-0">
+        <div class="relative mb-10 p-8 md:p-12">
+            <!-- Background with Gradient & Mesh (Clipped to rounded-3xl) -->
+            <div class="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none z-0">
+                <div class="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800"></div>
+                <div
+                    class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay">
+                </div>
+                <div
+                    class="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2">
+                </div>
+                <div
+                    class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-accent-gold/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2">
+                </div>
             </div>
 
             <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
