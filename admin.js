@@ -1670,6 +1670,7 @@ window.loadUsersForDelete = async () => {
         });
 
         select.innerHTML = '<option value="">Selecciona un usuario...</option>';
+        select.innerHTML += '<option value="all">-- TODOS LOS USUARIOS --</option>';
         profiles.forEach(p => {
             const name = p.username || p.email || 'Sin Nombre';
             select.innerHTML += `<option value="${p.id}">${name}</option>`;
@@ -1712,16 +1713,26 @@ window.confirmDeletePredictions = async () => {
     if (!userId) return alert('Selecciona un usuario');
 
     const userName = document.getElementById('delete-user-select').selectedOptions[0].text;
+    const isAllUsers = userId === 'all';
 
     if (gameId === 'all') {
-        if (!confirm(`¿Estás seguro de eliminar TODOS los pronósticos de la JORNADA ${matchday} para ${userName}? Esta acción no se puede deshacer.`)) return;
+        const confirmMsg = isAllUsers
+            ? `¿Estás seguro de eliminar los pronósticos de TODOS los usuarios para la JORNADA ${matchday}? Esta acción no se puede deshacer.`
+            : `¿Estás seguro de eliminar TODOS los pronósticos de la JORNADA ${matchday} para ${userName}? Esta acción no se puede deshacer.`;
+
+        if (!confirm(confirmMsg)) return;
 
         const { data: matchesData } = await supabase.from('matches').select('id').eq('matchday', matchday);
         const matchIds = matchesData.map(m => m.id);
 
         if (matchIds.length === 0) return alert('No hay partidos en esta jornada');
 
-        const { error } = await supabaseAdmin.from('predictions').delete().eq('user_id', userId).in('match_id', matchIds);
+        let query = supabaseAdmin.from('predictions').delete().in('match_id', matchIds);
+        if (!isAllUsers) {
+            query = query.eq('user_id', userId);
+        }
+
+        const { error } = await query;
 
         if (error) alert('Error al eliminar: ' + error.message);
         else {
@@ -1733,9 +1744,18 @@ window.confirmDeletePredictions = async () => {
 
     } else {
         const gameText = document.getElementById('delete-game-select').selectedOptions[0].text;
-        if (!confirm(`¿Estás seguro de eliminar el pronóstico de ${gameText} para ${userName}?`)) return;
+        const confirmMsg = isAllUsers
+            ? `¿Estás seguro de eliminar el pronóstico de ${gameText} para TODOS los usuarios?`
+            : `¿Estás seguro de eliminar el pronóstico de ${gameText} para ${userName}?`;
 
-        const { error } = await supabaseAdmin.from('predictions').delete().eq('user_id', userId).eq('match_id', gameId);
+        if (!confirm(confirmMsg)) return;
+
+        let query = supabaseAdmin.from('predictions').delete().eq('match_id', gameId);
+        if (!isAllUsers) {
+            query = query.eq('user_id', userId);
+        }
+
+        const { error } = await query;
 
         if (error) alert('Error al eliminar: ' + error.message);
         else {
