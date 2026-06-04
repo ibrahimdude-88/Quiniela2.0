@@ -540,9 +540,33 @@
             CPV: 'cv', COD: 'cd', IRQ: 'iq', BIH: 'ba', SWE: 'se', TUR: 'tr', CZE: 'cz'
         };
         if (!code) return 'https://flagcdn.com/w40/un.png';
-        var s = String(code);
+        var s = String(code).trim();
+        
+        // Reverse lookup names to codes if it's a full name
+        if (s.length > 3 && !/^[WL]/.test(s) && s !== 'TBD') {
+            var nameMap = {
+                'México': 'MEX', 'Brasil': 'BRA', 'Argentina': 'ARG', 'EE.UU.': 'USA', 'Canadá': 'CAN',
+                'España': 'ESP', 'Francia': 'FRA', 'Alemania': 'GER', 'Inglaterra': 'ENG', 'Portugal': 'POR',
+                'Países Bajos': 'NED', 'Bélgica': 'BEL', 'Croacia': 'CRO', 'Uruguay': 'URU', 'Marruecos': 'MAR',
+                'Japón': 'JPN', 'Corea del Sur': 'KOR', 'Senegal': 'SEN', 'Suiza': 'SUI', 'Polonia': 'POL',
+                'Australia': 'AUS', 'Italia': 'ITA', 'Ecuador': 'ECU', 'Qatar': 'QAT', 'Irán': 'IRN',
+                'Arabia S.': 'KSA', 'Arabia Saudita': 'KSA', 'Ghana': 'GHA', 'Camerún': 'CMR', 'Túnez': 'TUN', 'Serbia': 'SRB',
+                'Dinamarca': 'DEN', 'Colombia': 'COL', 'Panamá': 'PAN', 'Costa Rica': 'CRC',
+                'Gales': 'WAL', 'Sudáfrica': 'RSA', 'Paraguay': 'PAR', 'Escocia': 'SCO',
+                'Costa de Marfil': 'CIV', 'Austria': 'AUT', 'Argelia': 'ALG', 'Bolivia': 'BOL',
+                'Venezuela': 'VEN', 'Chile': 'CHI', 'Perú': 'PER', 'Nueva Zelanda': 'NZL',
+                'Egipto': 'EGY', 'Uzbekistán': 'UZB', 'Haití': 'HAI', 'Cabo Verde': 'CPV',
+                'Curazao': 'CUR', 'Noruega': 'NOR', 'Jordania': 'JOR',
+                'RD Congo': 'COD', 'Irak': 'IRQ', 'Bosnia y Herz.': 'BIH', 'Suecia': 'SWE', 'Turquía': 'TUR', 'Rep. Checa': 'CZE'
+            };
+            var codeResolved = nameMap[s];
+            if (codeResolved) {
+                s = codeResolved;
+            }
+        }
+        
         if (/^[WL]/.test(s) || s.length > 3) return 'https://flagcdn.com/w40/un.png';
-        return 'https://flagcdn.com/w40/' + (map[code] || 'un') + '.png';
+        return 'https://flagcdn.com/w40/' + (map[s] || 'un') + '.png';
     }
 
 })(); // End IIFE

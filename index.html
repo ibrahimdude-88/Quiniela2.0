@@ -1200,8 +1200,31 @@
             CPV: 'Cabo Verde', COD: 'RD Congo', IRQ: 'Irak', BIH: 'Bosnia y Herz.', SWE: 'Suecia', TUR: 'Turquía', CZE: 'Rep. Checa'
         };
         function _getFlagUrl(code) {
-            if (!code || /^[WL]/.test(code)) return 'https://flagcdn.com/w80/un.png';
-            return 'https://flagcdn.com/w80/' + (_flagMap[code] || 'un') + '.png';
+            if (!code) return 'https://flagcdn.com/w80/un.png';
+            var s = String(code).trim();
+            if (s.length > 3 && !/^[WL]/.test(s) && s !== 'TBD') {
+                var nameMap = {
+                    'México': 'MEX', 'Brasil': 'BRA', 'Argentina': 'ARG', 'EE.UU.': 'USA', 'Canadá': 'CAN',
+                    'España': 'ESP', 'Francia': 'FRA', 'Alemania': 'GER', 'Inglaterra': 'ENG', 'Portugal': 'POR',
+                    'Países Bajos': 'NED', 'Bélgica': 'BEL', 'Croacia': 'CRO', 'Uruguay': 'URU', 'Marruecos': 'MAR',
+                    'Japón': 'JPN', 'Corea del Sur': 'KOR', 'Senegal': 'SEN', 'Suiza': 'SUI', 'Polonia': 'POL',
+                    'Australia': 'AUS', 'Italia': 'ITA', 'Ecuador': 'ECU', 'Qatar': 'QAT', 'Irán': 'IRN',
+                    'Arabia S.': 'KSA', 'Arabia Saudita': 'KSA', 'Ghana': 'GHA', 'Camerún': 'CMR', 'Túnez': 'TUN', 'Serbia': 'SRB',
+                    'Dinamarca': 'DEN', 'Colombia': 'COL', 'Panamá': 'PAN', 'Costa Rica': 'CRC',
+                    'Gales': 'WAL', 'Sudáfrica': 'RSA', 'Paraguay': 'PAR', 'Escocia': 'SCO',
+                    'Costa de Marfil': 'CIV', 'Austria': 'AUT', 'Argelia': 'ALG', 'Bolivia': 'BOL',
+                    'Venezuela': 'VEN', 'Chile': 'CHI', 'Perú': 'PER', 'Nueva Zelanda': 'NZL',
+                    'Egipto': 'EGY', 'Uzbekistán': 'UZB', 'Haití': 'HAI', 'Cabo Verde': 'CPV',
+                    'Curazao': 'CUR', 'Noruega': 'NOR', 'Jordania': 'JOR',
+                    'RD Congo': 'COD', 'Irak': 'IRQ', 'Bosnia y Herz.': 'BIH', 'Suecia': 'SWE', 'Turquía': 'TUR', 'Rep. Checa': 'CZE'
+                };
+                var codeResolved = nameMap[s];
+                if (codeResolved) {
+                    s = codeResolved;
+                }
+            }
+            if (/^[WL]/.test(s)) return 'https://flagcdn.com/w80/un.png';
+            return 'https://flagcdn.com/w80/' + (_flagMap[s] || 'un') + '.png';
         }
         function _getTeamName(code) { return _nameMap[code] || code || 'TBD'; }
 
