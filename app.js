@@ -1125,9 +1125,9 @@ async function loadRanking() {
                      <p class="text-[10px] text-slate-500 font-medium">${p.points} pts</p>
                 </div>
             </div>
-            ${rank === 1 ? '<span class="material-icons text-lg rank-cup-gold">emoji_events</span>' : ''}
-            ${rank === 2 ? '<span class="material-icons text-base rank-cup-silver">emoji_events</span>' : ''}
-            ${rank === 3 ? '<span class="material-icons text-sm rank-cup-bronze">emoji_events</span>' : ''}
+            ${rank === 1 ? '<span class="material-icons text-xl rank-cup-gold">emoji_events</span>' : ''}
+            ${rank === 2 ? '<span class="material-icons text-lg rank-cup-silver">emoji_events</span>' : ''}
+            ${rank === 3 ? '<span class="material-icons text-base rank-cup-bronze">emoji_events</span>' : ''}
         </div>
     `}).join('');
 
