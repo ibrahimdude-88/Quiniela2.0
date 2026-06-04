@@ -6,6 +6,7 @@ let currentUser = null;
 let currentMatchday = 1;
 let matches = [];
 let predictions = {};
+let unsavedPredictions = {}; // Tracks temporary changes in the current matchday
 let appSettings = [];
 
 // Helper for Flags
@@ -238,6 +239,10 @@ async function loadData() {
         (predictionsData || []).forEach(p => {
             predictions[p.match_id] = p;
         });
+        unsavedPredictions = {};
+        if (typeof updateSaveBarVisibility === 'function') {
+            updateSaveBarVisibility();
+        }
         console.log('[DATA] Predictions loaded:', Object.keys(predictions).length);
 
         console.log('[DATA] Fetching settings...');
@@ -581,14 +586,20 @@ function renderMatches() {
 
                 let displayHomeScore = '';
                 let displayAwayScore = '';
-                let inputType = 'number';
+                let inputType = 'text';
                 let placeholder = '-';
                 let inputStateClass = '';
 
-                if (hasPrediction) {
+                // Read from unsaved predictions first if it exists, otherwise from saved prediction
+                const unsaved = unsavedPredictions[match.id];
+                const activeHome = unsaved ? unsaved.home_score : (prediction ? prediction.home_score : '');
+                const activeAway = unsaved ? unsaved.away_score : (prediction ? prediction.away_score : '');
+                const activePen = unsaved ? unsaved.penalty_winner : (prediction ? prediction.penalty_winner : null);
+
+                if (hasPrediction || unsaved) {
                     if (isPaid) {
-                        displayHomeScore = prediction.home_score;
-                        displayAwayScore = prediction.away_score;
+                        displayHomeScore = activeHome !== null && activeHome !== undefined ? activeHome : '';
+                        displayAwayScore = activeAway !== null && activeAway !== undefined ? activeAway : '';
                         inputStateClass = 'text-white border-primary/50 bg-primary/5';
                     } else {
                         inputType = 'password';
@@ -642,12 +653,10 @@ function renderMatches() {
 
                     statusHtml = `
                          <div class="flex flex-col items-center md:items-end gap-3 min-w-[120px]">
-                            <div class="text-xs text-slate-400 text-center md:text-right hidden md:block">
+                            <div class="text-xs text-slate-400 text-center md:text-right">
                                 <p class="font-medium text-slate-300 capitalize">${dateStr}</p>
+                                <p class="text-[10px] text-slate-500 mt-1">${match.stadium || ''}</p>
                             </div>
-                            <button onclick="savePrediction(${match.id})" class="bg-primary hover:bg-green-500 text-white w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg shadow-primary/20 group transform hover:scale-105 active:scale-95">
-                                <span class="material-icons text-lg group-hover:scale-110 transition-transform">save</span>
-                            </button>
                         </div>`;
                 }
 
@@ -656,19 +665,21 @@ function renderMatches() {
                 let penaltyHtml = '';
 
                 if (isKnockout) {
-                    const predPenalty = prediction?.penalty_winner;
-                    const isTie = prediction && prediction.home_score !== null && prediction.away_score !== null && parseInt(prediction.home_score) === parseInt(prediction.away_score);
+                    const predPenalty = activePen;
+                    const homeVal = activeHome !== '' && activeHome !== null && activeHome !== undefined ? parseInt(activeHome) : NaN;
+                    const awayVal = activeAway !== '' && activeAway !== null && activeAway !== undefined ? parseInt(activeAway) : NaN;
+                    const isTie = !isNaN(homeVal) && !isNaN(awayVal) && homeVal === awayVal;
                     const containerVisibilityClass = isTie ? '' : 'hidden opacity-0 pointer-events-none';
                     penaltyHtml = `
                         <div id="penalty-container-user-${match.id}" class="mt-4 pt-4 border-t border-white/5 w-full flex flex-col items-center gap-2 transition-all duration-300 ${containerVisibilityClass}">
                              <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Ganador en Penales (Si hay empate)</span>
                              <div class="flex items-center gap-4">
                                 <label class="flex items-center gap-2 cursor-pointer bg-black/20 px-3 py-1.5 rounded-lg border border-white/5 hover:bg-white/5 transition-colors">
-                                    <input type="radio" name="penalty-${match.id}" value="home" ${predPenalty === 'home' ? 'checked' : ''} ${inputsDisabled ? 'disabled' : ''} class="text-primary focus:ring-primary/50 bg-transparent border-slate-600">
+                                    <input type="radio" name="penalty-${match.id}" value="home" onchange="onPredictionInput(${match.id})" ${predPenalty === 'home' ? 'checked' : ''} ${inputsDisabled ? 'disabled' : ''} class="text-primary focus:ring-primary/50 bg-transparent border-slate-600">
                                     <span class="text-xs font-bold text-slate-300">Local</span>
                                 </label>
                                 <label class="flex items-center gap-2 cursor-pointer bg-black/20 px-3 py-1.5 rounded-lg border border-white/5 hover:bg-white/5 transition-colors">
-                                    <input type="radio" name="penalty-${match.id}" value="away" ${predPenalty === 'away' ? 'checked' : ''} ${inputsDisabled ? 'disabled' : ''} class="text-primary focus:ring-primary/50 bg-transparent border-slate-600">
+                                    <input type="radio" name="penalty-${match.id}" value="away" onchange="onPredictionInput(${match.id})" ${predPenalty === 'away' ? 'checked' : ''} ${inputsDisabled ? 'disabled' : ''} class="text-primary focus:ring-primary/50 bg-transparent border-slate-600">
                                     <span class="text-xs font-bold text-slate-300">Visitante</span>
                                 </label>
                              </div>
@@ -687,8 +698,8 @@ function renderMatches() {
                 }
 
                 const html = `
-                  <div class="bg-surface-dark rounded-2xl p-5 border ${hasPrediction ? 'border-primary/20 bg-primary/[0.02]' : 'border-white/5'} flex flex-col transition-all hover:bg-white/[0.02] group relative overflow-hidden mb-4">
-                    ${hasPrediction ? '<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-primary/10 to-transparent pointer-events-none"></div>' : ''}
+                  <div class="bg-surface-dark rounded-2xl p-5 border ${hasPrediction || unsaved ? 'border-primary/20 bg-primary/[0.02]' : 'border-white/5'} flex flex-col transition-all hover:bg-white/[0.02] group relative overflow-hidden mb-4">
+                    ${hasPrediction || unsaved ? '<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-primary/10 to-transparent pointer-events-none"></div>' : ''}
             
                     <div class="flex flex-col md:flex-row items-center justify-between gap-6">
                         <div class="flex-1 flex items-center justify-center md:justify-between w-full gap-4 md:gap-8">
@@ -699,28 +710,61 @@ function renderMatches() {
                             <span id="pred-name-home-${match.id}" onclick="toggleTeamName('${match.home_team}', 'pred-name-home-${match.id}')" class="font-bold text-xs md:text-sm tracking-wider text-slate-300 truncate max-w-full text-center cursor-pointer select-none">${match.home_team}</span>
                           </div>
                 
-                          <div class="flex items-center gap-2 md:gap-4 relative">
+                          <div class="flex items-center gap-3 relative">
                             ${(match.home_score !== null && match.away_score !== null) ? `
                                 <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-background-dark border border-primary/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-xl pointer-events-none z-20 whitespace-nowrap">
                                     <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Real</span>
                                     <span class="text-xs font-mono font-extrabold text-primary tracking-widest">${match.home_score} : ${match.away_score}</span>
                                 </div>
                             ` : ''}
-                            <input id="pred-home-${match.id}" 
-                                   class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-background-dark border-2 border-slate-700/50 text-center text-xl md:text-2xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
-                                   type="${inputType}" 
-                                   value="${displayHomeScore}" 
-                                   ${inputsDisabled ? 'disabled' : ''}
-                                   oninput="updatePenaltyContainer(${match.id})"
-                                   placeholder="${placeholder}"/>
-                            <span class="text-slate-600 font-black text-lg md:text-xl select-none">vs</span>
-                            <input id="pred-away-${match.id}" 
-                                   class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-background-dark border-2 border-slate-700/50 text-center text-xl md:text-2xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
-                                   type="${inputType}" 
-                                   value="${displayAwayScore}" 
-                                   ${inputsDisabled ? 'disabled' : ''}
-                                   oninput="updatePenaltyContainer(${match.id})"
-                                   placeholder="${placeholder}"/>
+                            
+                            <!-- Home score adjuster -->
+                            <div class="flex items-center gap-1">
+                                ${!inputsDisabled ? `
+                                    <button type="button" onclick="adjustValue(${match.id}, 'home', -1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
+                                        <span class="material-icons text-xs font-black">remove</span>
+                                    </button>
+                                ` : ''}
+                                <input id="pred-home-${match.id}" 
+                                       class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-background-dark border-2 border-slate-700/50 text-center text-lg md:text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
+                                       type="${inputType}" 
+                                       value="${displayHomeScore}" 
+                                       ${inputsDisabled ? 'disabled' : ''}
+                                       oninput="updatePenaltyContainer(${match.id}); onPredictionInput(${match.id});"
+                                       placeholder="${placeholder}"
+                                       pattern="[0-9]*"
+                                       inputmode="numeric"/>
+                                ${!inputsDisabled ? `
+                                    <button type="button" onclick="adjustValue(${match.id}, 'home', 1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
+                                        <span class="material-icons text-xs font-black">add</span>
+                                    </button>
+                                ` : ''}
+                            </div>
+
+                            <span class="text-slate-600 font-black text-sm select-none mx-0.5">vs</span>
+
+                            <!-- Away score adjuster -->
+                            <div class="flex items-center gap-1">
+                                ${!inputsDisabled ? `
+                                    <button type="button" onclick="adjustValue(${match.id}, 'away', -1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
+                                        <span class="material-icons text-xs font-black">remove</span>
+                                    </button>
+                                ` : ''}
+                                <input id="pred-away-${match.id}" 
+                                       class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-background-dark border-2 border-slate-700/50 text-center text-lg md:text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
+                                       type="${inputType}" 
+                                       value="${displayAwayScore}" 
+                                       ${inputsDisabled ? 'disabled' : ''}
+                                       oninput="updatePenaltyContainer(${match.id}); onPredictionInput(${match.id});"
+                                       placeholder="${placeholder}"
+                                       pattern="[0-9]*"
+                                       inputmode="numeric"/>
+                                ${!inputsDisabled ? `
+                                    <button type="button" onclick="adjustValue(${match.id}, 'away', 1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 flex items-center justify-center text-slate-300 transition-all active:scale-90 select-none">
+                                        <span class="material-icons text-xs font-black">add</span>
+                                    </button>
+                                ` : ''}
+                            </div>
                           </div>
                 
                            <div class="flex flex-col items-center gap-3 w-24 md:w-28">
@@ -772,12 +816,175 @@ window.updatePenaltyContainer = (matchId) => {
     }
 };
 
+function updateSaveBarVisibility() {
+    const bar = document.getElementById('sticky-save-bar');
+    const countEl = document.getElementById('unsaved-count');
+    const matchdayEl = document.getElementById('unsaved-matchday');
+    
+    if (!bar) return;
+    
+    const unsavedKeys = Object.keys(unsavedPredictions);
+    const count = unsavedKeys.length;
+    
+    if (count > 0) {
+        if (countEl) countEl.textContent = count;
+        if (matchdayEl) matchdayEl.textContent = currentMatchday;
+        bar.classList.remove('translate-y-full');
+    } else {
+        bar.classList.add('translate-y-full');
+    }
+}
+
+window.adjustValue = (matchId, side, delta) => {
+    const input = document.getElementById(`pred-${side}-${matchId}`);
+    if (!input || input.disabled) return;
+
+    let currentVal = parseInt(input.value);
+    if (isNaN(currentVal)) {
+        currentVal = 0;
+    }
+
+    let newVal = currentVal + delta;
+    if (newVal < 0) newVal = 0;
+
+    input.value = newVal;
+
+    if (window.updatePenaltyContainer) {
+        window.updatePenaltyContainer(matchId);
+    }
+
+    window.onPredictionInput(matchId);
+};
+
+window.onPredictionInput = (matchId) => {
+    const homeInput = document.getElementById(`pred-home-${matchId}`);
+    const awayInput = document.getElementById(`pred-away-${matchId}`);
+    if (!homeInput || !awayInput) return;
+
+    const valHome = homeInput.value.trim();
+    const valAway = awayInput.value.trim();
+
+    const currentHome = valHome === '' ? null : parseInt(valHome);
+    const currentAway = valAway === '' ? null : parseInt(valAway);
+
+    let penaltyWinner = null;
+    const penaltyInput = document.querySelector(`input[name="penalty-${matchId}"]:checked`);
+    if (penaltyInput) {
+        penaltyWinner = penaltyInput.value;
+    }
+
+    const saved = predictions[matchId];
+
+    let isDifferent = false;
+    if (saved) {
+        const savedHome = saved.home_score === null ? null : parseInt(saved.home_score);
+        const savedAway = saved.away_score === null ? null : parseInt(saved.away_score);
+        const savedPen = saved.penalty_winner || null;
+        
+        const homeChanged = currentHome !== savedHome;
+        const awayChanged = currentAway !== savedAway;
+        const penChanged = (currentHome !== null && currentAway !== null && currentHome === currentAway) ? (penaltyWinner !== savedPen) : false;
+
+        if (homeChanged || awayChanged || penChanged) {
+            isDifferent = true;
+        }
+    } else {
+        if (currentHome !== null || currentAway !== null) {
+            isDifferent = true;
+        }
+    }
+
+    if (isDifferent) {
+        unsavedPredictions[matchId] = {
+            home_score: currentHome === null ? 0 : currentHome,
+            away_score: currentAway === null ? 0 : currentAway,
+            penalty_winner: penaltyWinner
+        };
+    } else {
+        delete unsavedPredictions[matchId];
+    }
+
+    updateSaveBarVisibility();
+};
+
+window.saveAllPredictions = async () => {
+    const unsavedKeys = Object.keys(unsavedPredictions);
+    if (unsavedKeys.length === 0) return;
+
+    const btn = document.getElementById('btn-save-all');
+    const originalContent = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<span class="material-icons animate-spin text-sm">refresh</span> Guardando...';
+        btn.disabled = true;
+    }
+
+    const rowsToUpsert = unsavedKeys.map(matchId => {
+        const item = unsavedPredictions[matchId];
+        return {
+            user_id: currentUser.profile.id,
+            match_id: parseInt(matchId),
+            home_score: item.home_score,
+            away_score: item.away_score,
+            penalty_winner: item.penalty_winner
+        };
+    });
+
+    try {
+        console.log('[BULK SAVE] Upserting predictions:', rowsToUpsert);
+        const { data, error } = await supabase
+            .from('predictions')
+            .upsert(rowsToUpsert, { onConflict: 'user_id, match_id' });
+
+        if (error) throw error;
+
+        rowsToUpsert.forEach(row => {
+            predictions[row.match_id] = {
+                ...predictions[row.match_id],
+                user_id: row.user_id,
+                match_id: row.match_id,
+                home_score: row.home_score,
+                away_score: row.away_score,
+                penalty_winner: row.penalty_winner
+            };
+        });
+
+        console.log('[BULK SAVE] Batch predictions saved successfully');
+        unsavedPredictions = {};
+        updateSaveBarVisibility();
+        renderMatches();
+        if (typeof checkAchievements === 'function') {
+            checkAchievements();
+        }
+
+    } catch (err) {
+        console.error('[BULK SAVE] Error saving batch predictions:', err);
+        alert('Error al guardar todos los pronósticos.');
+        if (btn) {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        }
+    }
+};
+
+window.discardUnsavedPredictions = () => {
+    unsavedPredictions = {};
+    updateSaveBarVisibility();
+    renderMatches();
+};
+
 function setupEventListeners() {
     console.log('[EVENTS] Setting up event listeners');
 
     // Matchday buttons
     document.querySelectorAll('button[data-matchday]').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            if (Object.keys(unsavedPredictions).length > 0) {
+                if (!confirm('Tienes cambios sin guardar en esta jornada. ¿Deseas descartarlos y cambiar de jornada?')) {
+                    return;
+                }
+                unsavedPredictions = {};
+                updateSaveBarVisibility();
+            }
             currentMatchday = parseInt(e.currentTarget.dataset.matchday);
             console.log('[EVENTS] Matchday changed to:', currentMatchday);
             renderMatches();
