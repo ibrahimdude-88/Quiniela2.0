@@ -302,17 +302,18 @@
         var label = isTBD ? (resolved || 'TBD') : _name(resolved);
 
         var pill = document.createElement('div');
-        pill.style.cssText = 'background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:999px;padding:5px 14px;font-size:11px;font-weight:700;color:#94a3b8;display:flex;align-items:center;gap:6px;min-width:90px;justify-content:center;white-space:nowrap;';
+        pill.style.cssText = 'background:#1e293b;border:1px solid rgba(255,255,255,0.08);border-radius:999px;padding:5px 10px;font-size:11px;font-weight:700;color:#94a3b8;display:flex;align-items:center;gap:6px;width:130px;justify-content:center;white-space:nowrap;box-sizing:border-box;';
 
         if (!isTBD) {
             var img = document.createElement('img');
             img.src = _flag(resolved);
-            img.style.cssText = 'width:14px;height:14px;border-radius:50%;object-fit:cover;';
+            img.style.cssText = 'width:14px;height:14px;border-radius:50%;object-fit:cover;flex-shrink:0;';
             img.onerror = function () { this.remove(); };
             pill.appendChild(img);
         }
         var sp = document.createElement('span');
         sp.textContent = label;
+        sp.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
         pill.appendChild(sp);
 
         var stub = document.createElement('div');
