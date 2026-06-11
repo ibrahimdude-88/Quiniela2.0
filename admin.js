@@ -160,7 +160,7 @@ async function loadUsers() {
     }
 
     const { data: predsData, error: predsError } = await supabase.from('predictions')
-        .select('user_id, match_id, home_score, away_score');
+        .select('user_id, match_id, home_score, away_score, penalty_winner, points_earned');
 
     const allPreds = predsData || [];
 
@@ -875,6 +875,9 @@ function renderUsers() {
                 ${renderUserPredictionProgress(user)}
             </td>
             <td class="px-4 py-3 text-right">
+                 <button onclick="openUserPredictionsModal('${user.id}', '${user.username || user.email || 'Usuario'}')" class="p-1.5 rounded-lg hover:bg-white/10 text-emerald-400 transition-colors" title="Ver Pronósticos">
+                    <span class="material-icons text-sm">visibility</span>
+                 </button>
                  <button onclick="toggleAdmin('${user.id}', ${user.role !== 'admin'})" class="p-1.5 rounded-lg hover:bg-white/10 transition-colors ${user.role === 'admin' ? 'text-accent-gold' : 'text-slate-600'}">
                     <span class="material-icons text-sm">shield</span>
                  </button>
@@ -897,30 +900,58 @@ function renderUserPredictionProgress(user) {
         4: '16V', 5: '8V', 6: '4T', 7: 'SM', 8: 'FN'
     };
 
+    const mNames = {
+        1: 'Jornada 1', 2: 'Jornada 2', 3: 'Jornada 3',
+        4: '16vos de Final', 5: 'Octavos de Final', 6: 'Cuartos de Final', 7: 'Semifinales', 8: 'Final y 3er Lugar'
+    };
+
     let html = '<div class="flex flex-wrap gap-1 justify-center">';
 
     for (let matchday = 1; matchday <= 8; matchday++) {
-        const matchesInMd = matches.filter(m => m.matchday === matchday && m.home_team !== 'TBD' && m.away_team !== 'TBD');
+        // Matches in this matchday that have defined teams
+        const definedMatches = matches.filter(m => m.matchday === matchday && m.home_team !== 'TBD' && m.away_team !== 'TBD');
+        // Total matches in this matchday (defined or not)
+        const totalMatches = matches.filter(m => m.matchday === matchday);
 
-        if (matchesInMd.length === 0) continue;
+        if (totalMatches.length === 0) continue;
 
         let completed = 0;
-        matchesInMd.forEach(m => {
+        definedMatches.forEach(m => {
             if (predsByMatchId.has(m.id)) completed++;
         });
 
-        const total = matchesInMd.length;
-        const isComplete = completed === total;
-        const isPartial = completed > 0 && completed < total;
+        const totalDefined = definedMatches.length;
 
-        // bg-green complete, yellow partial, slate none
-        let bgClass = 'bg-slate-700/50 text-slate-500 border-slate-600/50';
-        if (isComplete) bgClass = 'bg-green-500/20 text-green-400 border-green-500/30';
-        else if (isPartial) bgClass = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+        let bgClass = '';
+        let displayText = mLabels[matchday];
+        let titleText = '';
 
-        html += `<div title="${mLabels[matchday]}: ${completed}/${total} capturados" 
-                      class="px-1.5 py-0.5 rounded text-[9px] font-bold border cursor-help ${bgClass}">
-                    ${mLabels[matchday]}
+        if (totalDefined === 0) {
+            // Phase not defined yet (all games are TBD)
+            bgClass = 'bg-slate-800/40 text-slate-500 border-white/5 opacity-50 cursor-not-allowed';
+            titleText = `${mNames[matchday]}: Sin emparejamientos definidos aún (TBD)`;
+            displayText = `${mLabels[matchday]}`;
+        } else {
+            const isComplete = completed === totalDefined;
+            const isPartial = completed > 0 && completed < totalDefined;
+
+            if (isComplete) {
+                bgClass = 'bg-green-500/20 text-green-400 border-green-500/30 font-black';
+                titleText = `${mNames[matchday]}: ¡Completo! (${completed}/${totalDefined} pronósticos)`;
+                displayText = `${mLabels[matchday]} ✓`;
+            } else {
+                const missing = totalDefined - completed;
+                bgClass = isPartial 
+                    ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' 
+                    : 'bg-red-500/10 text-red-400 border-red-500/20';
+                titleText = `${mNames[matchday]}: Incompleto (Faltan ${missing} de ${totalDefined} pronósticos)`;
+                displayText = `${mLabels[matchday]} (-${missing})`;
+            }
+        }
+
+        html += `<div title="${titleText}" 
+                      class="px-1.5 py-0.5 rounded text-[9px] font-bold border cursor-help transition-all hover:scale-105 ${bgClass}">
+                    ${displayText}
                  </div>`;
     }
 
@@ -3085,4 +3116,234 @@ window.runSimulation = async () => {
         cancelBtn.disabled = false;
     }
 };
+
+// --- User Predictions Viewer Modal ---
+let viewerUserId = null;
+let viewerUsername = '';
+let viewerSelectedMatchday = 1;
+
+window.openUserPredictionsModal = (userId, username) => {
+    viewerUserId = userId;
+    viewerUsername = username;
+    viewerSelectedMatchday = 1;
+
+    const modal = document.getElementById('user-predictions-modal');
+    const titleEl = document.getElementById('upm-username');
+    if (!modal) return;
+
+    if (titleEl) {
+        titleEl.textContent = `Visualizando los pronósticos de: ${username}`;
+    }
+
+    // Render Matchday Tab Selection
+    renderViewerTabs();
+    
+    // Render Predictions for matchday 1
+    renderViewerPredictions();
+
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        const inner = modal.querySelector('div');
+        if (inner) {
+            inner.classList.remove('scale-95');
+            inner.classList.add('scale-100');
+        }
+    }, 10);
+};
+
+window.closeUserPredictionsModal = () => {
+    const modal = document.getElementById('user-predictions-modal');
+    if (!modal) return;
+
+    modal.classList.add('opacity-0');
+    const inner = modal.querySelector('div');
+    if (inner) {
+        inner.classList.remove('scale-100');
+        inner.classList.add('scale-95');
+    }
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+};
+
+function renderViewerTabs() {
+    const tabsContainer = document.getElementById('upm-matchday-tabs');
+    if (!tabsContainer) return;
+
+    const mLabels = {
+        1: 'J1', 2: 'J2', 3: 'J3',
+        4: '16vos', 5: '8vos', 6: '4tos', 7: 'Semis', 8: 'Final'
+    };
+
+    tabsContainer.innerHTML = [1, 2, 3, 4, 5, 6, 7, 8].map(md => {
+        const isActive = md === viewerSelectedMatchday;
+        const btnClass = isActive 
+            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 font-bold' 
+            : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10';
+        return `
+            <button onclick="changeViewerMatchday(${md})" class="px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap ${btnClass}">
+                ${mLabels[md]}
+            </button>
+        `;
+    }).join('');
+}
+
+window.changeViewerMatchday = (matchday) => {
+    viewerSelectedMatchday = matchday;
+    renderViewerTabs();
+    renderViewerPredictions();
+};
+
+window.renderViewerPredictions = () => {
+    const container = document.getElementById('upm-matches-container');
+    if (!container) return;
+
+    const user = users.find(u => u.id === viewerUserId);
+    if (!user) {
+        container.innerHTML = '<p class="text-center text-slate-500 py-4">Usuario no encontrado.</p>';
+        return;
+    }
+
+    const userPreds = user.predictions || [];
+    const predsMap = new Map(userPreds.map(p => [p.match_id, p]));
+
+    // Filter matches for the selected matchday
+    const mdMatches = matches.filter(m => m.matchday === viewerSelectedMatchday);
+    // Sort matches by date
+    mdMatches.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (mdMatches.length === 0) {
+        container.innerHTML = '<p class="text-center text-slate-500 py-8 text-xs">No hay partidos en esta jornada.</p>';
+        return;
+    }
+
+    container.innerHTML = mdMatches.map(match => {
+        const pred = predsMap.get(match.id);
+        const hasPred = !!pred;
+        const isFinal = match.status === 'f';
+        const isKnockout = match.matchday >= 4;
+
+        // Flags and names
+        const homeFlag = getFlagUrl(match.home_team);
+        const awayFlag = getFlagUrl(match.away_team);
+        const homeName = friendlyTeamLabel(match.home_team);
+        const awayName = friendlyTeamLabel(match.away_team);
+
+        // Date formatting
+        let dateObj = new Date(match.date);
+        const timeStr = !isNaN(dateObj) ? dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+        const dateStr = !isNaN(dateObj) ? dateObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : 'Próximamente';
+
+        // Real score rendering
+        let realScoreHTML = '';
+        if (match.home_score !== null && match.away_score !== null) {
+            let penText = '';
+            if (isKnockout && match.penalty_winner) {
+                const pWin = match.penalty_winner === 'home' ? match.home_team : match.away_team;
+                penText = ` <span class="text-[9px] text-amber-400 font-bold">(Pen: ${pWin})</span>`;
+            }
+            realScoreHTML = `
+                <div class="flex items-center gap-1.5 bg-black/30 px-2 py-0.5 rounded border border-white/5">
+                    <span class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Real</span>
+                    <span class="text-xs font-mono font-bold text-emerald-400">${match.home_score} : ${match.away_score}</span>
+                    ${penText}
+                </div>
+            `;
+        } else {
+            realScoreHTML = `
+                <span class="text-[9px] font-bold uppercase text-slate-500 bg-white/5 px-2 py-0.5 rounded border border-white/5">Programado</span>
+            `;
+        }
+
+        // Prediction score rendering
+        let predScoreHTML = '';
+        let rowClass = 'border-white/5 bg-background-dark/30';
+        if (hasPred) {
+            let penPredText = '';
+            if (isKnockout && pred.penalty_winner) {
+                const penWinName = pred.penalty_winner === 'home' ? match.home_team : match.away_team;
+                penPredText = ` <span class="text-[9px] text-primary font-bold">(Pen: ${penWinName})</span>`;
+            }
+            predScoreHTML = `
+                <span class="text-sm font-mono font-black text-white bg-slate-800 px-3 py-1 rounded border border-slate-700/50">${pred.home_score} : ${pred.away_score}</span>
+                ${penPredText}
+            `;
+            rowClass = 'border-emerald-500/10 bg-emerald-500/[0.01]';
+        } else {
+            predScoreHTML = `
+                <span class="text-xs font-bold text-red-400/80 bg-red-500/10 px-2 py-1 rounded border border-red-500/10 flex items-center gap-1">
+                    <span class="material-icons text-[10px]">warning</span> Sin pronóstico
+                </span>
+            `;
+            rowClass = 'border-red-500/5 bg-red-500/[0.005]';
+        }
+
+        // Points earned badge
+        let pointsHTML = '';
+        if (isFinal) {
+            const pts = pred ? (pred.points_earned || 0) : 0;
+            const ptsColor = pts > 0 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-slate-800 text-slate-500 border-slate-700/50';
+            pointsHTML = `
+                <div class="flex flex-col items-end flex-shrink-0">
+                    <div class="px-2 py-0.5 rounded text-[10px] font-bold border ${ptsColor}">
+                        +${pts} Pts
+                    </div>
+                </div>
+            `;
+        } else if (match.status !== 'a') {
+            pointsHTML = `
+                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                    <span class="material-icons text-[10px]">lock</span> Cerrado
+                </div>
+            `;
+        }
+
+        return `
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 rounded-xl border ${rowClass} transition-colors hover:bg-white/[0.01] gap-3">
+                
+                <!-- Left: Date/Time -->
+                <div class="flex items-center gap-2 text-slate-500 text-xs sm:w-24 flex-shrink-0">
+                    <span class="material-icons text-sm text-slate-600">schedule</span>
+                    <div class="flex flex-col">
+                        <span class="font-bold text-slate-400">${dateStr}</span>
+                        <span class="text-[10px] text-slate-600">${timeStr}</span>
+                    </div>
+                </div>
+
+                <!-- Middle: Matchup with Flag, Prediction and Real scores -->
+                <div class="flex-1 w-full flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
+                    
+                    <!-- Team A -->
+                    <div class="flex items-center gap-2 sm:w-[150px] justify-start w-full sm:w-auto">
+                        <img src="${homeFlag}" class="w-5 h-5 rounded-full object-cover bg-slate-800 shadow-sm">
+                        <span class="text-xs font-bold text-slate-300 truncate max-w-[120px]">${homeName}</span>
+                    </div>
+
+                    <!-- Scores comparison container -->
+                    <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
+                        <!-- Prediction -->
+                        <div class="flex items-center gap-2">
+                            ${predScoreHTML}
+                        </div>
+                        <!-- Real score -->
+                        ${realScoreHTML}
+                    </div>
+
+                    <!-- Team B -->
+                    <div class="flex items-center gap-2 sm:w-[150px] justify-end w-full sm:w-auto text-right">
+                        <span class="text-xs font-bold text-slate-300 truncate max-w-[120px] order-first sm:order-none">${awayName}</span>
+                        <img src="${awayFlag}" class="w-5 h-5 rounded-full object-cover bg-slate-800 shadow-sm order-last sm:order-none">
+                    </div>
+
+                </div>
+
+                <!-- Right: Points / Status -->
+                ${pointsHTML}
+
+            </div>
+        `;
+    }).join('');
+};
+
 

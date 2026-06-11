@@ -726,7 +726,7 @@ function renderMatches() {
                                     </button>
                                 ` : ''}
                                 <input id="pred-home-${match.id}" 
-                                       class="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-background-dark border border-slate-700/50 text-center text-sm md:text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
+                                       class="w-9 h-9 md:w-12 md:h-12 p-0 rounded-lg md:rounded-xl bg-background-dark border border-slate-700/50 text-center text-sm md:text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
                                        type="${inputType}" 
                                        value="${displayHomeScore}" 
                                        ${inputsDisabled ? 'disabled' : ''}
@@ -751,7 +751,7 @@ function renderMatches() {
                                     </button>
                                 ` : ''}
                                 <input id="pred-away-${match.id}" 
-                                       class="w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-background-dark border border-slate-700/50 text-center text-sm md:text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
+                                       class="w-9 h-9 md:w-12 md:h-12 p-0 rounded-lg md:rounded-xl bg-background-dark border border-slate-700/50 text-center text-sm md:text-xl font-bold focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${inputStateClass}" 
                                        type="${inputType}" 
                                        value="${displayAwayScore}" 
                                        ${inputsDisabled ? 'disabled' : ''}
