@@ -149,7 +149,7 @@ async function init() {
 async function loadUsers() {
     console.log('[LOAD USERS] Fetching users from database...');
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('*')
         .order('points', { ascending: false });
@@ -159,7 +159,7 @@ async function loadUsers() {
         return;
     }
 
-    const { data: predsData, error: predsError } = await supabase.from('predictions')
+    const { data: predsData, error: predsError } = await supabaseAdmin.from('predictions')
         .select('user_id, match_id, home_score, away_score, penalty_winner, points_earned');
 
     const allPreds = predsData || [];
@@ -635,7 +635,7 @@ window.saveAllResults = async () => {
 };
 
 async function calculatePointsManually(matchId, homeScore, awayScore) {
-    const { data: preds } = await supabase.from('predictions').select('*').eq('match_id', matchId);
+    const { data: preds } = await supabaseAdmin.from('predictions').select('*').eq('match_id', matchId);
     if (!preds) return;
 
     const match = matches.find(m => m.id === matchId);
@@ -692,7 +692,7 @@ async function calculatePointsManually(matchId, homeScore, awayScore) {
         }
 
         if (pts !== p.points_earned) {
-            await supabase.from('predictions').update({ points_earned: pts }).eq('id', p.id);
+            await supabaseAdmin.from('predictions').update({ points_earned: pts }).eq('id', p.id);
         }
     }
 }
@@ -1089,7 +1089,7 @@ window.simulateGroupStageResults = async () => {
         console.log('[SIMULATE] Generating random predictions for ALL users...');
 
         // Fetch ALL profiles
-        const { data: allPROFILES, error: profileErr } = await supabase.from('profiles').select('id');
+        const { data: allPROFILES, error: profileErr } = await supabaseAdmin.from('profiles').select('id');
         if (profileErr) throw profileErr;
 
         if (allPROFILES && allPROFILES.length > 0) {
@@ -1208,7 +1208,7 @@ async function updateAllProfilesPoints() {
     console.log('[UPDATE PROFILES] Starting update...');
     try {
         // 1. Fetch all users to initialize
-        const { data: users, error: userError } = await supabase.from('profiles').select('id');
+        const { data: users, error: userError } = await supabaseAdmin.from('profiles').select('id');
         if (userError) throw userError;
 
         const userPoints = {};
@@ -1216,7 +1216,7 @@ async function updateAllProfilesPoints() {
         users.forEach(u => { userPoints[u.id] = 0; userExacts[u.id] = 0; }); // Init all to 0
 
         // 2. Fetch all predictions with points > 0
-        const { data: preds, error } = await supabase.from('predictions')
+        const { data: preds, error } = await supabaseAdmin.from('predictions')
             .select('user_id, points_earned')
             .gt('points_earned', 0); // Only positive points matter for sum
 
@@ -1248,7 +1248,7 @@ async function updateAllProfilesPoints() {
             // Only include exact_score_count if we haven't detected it's missing
             if (!exactMatchesMissing) updates.exact_score_count = userExacts[uid];
 
-            const { error } = await supabase.from('profiles')
+            const { error } = await supabaseAdmin.from('profiles')
                 .update(updates)
                 .eq('id', uid);
 
@@ -1259,7 +1259,7 @@ async function updateAllProfilesPoints() {
                     exactMatchesMissing = true; // Flag to skip column for rest
 
                     // Retry immediately without exact_score_count
-                    const { error: retryError } = await supabase.from('profiles')
+                    const { error: retryError } = await supabaseAdmin.from('profiles')
                         .update({ points: userPoints[uid] }) // Points only
                         .eq('id', uid);
 
@@ -1296,7 +1296,7 @@ window.resetApp = async () => {
 
         // 1. Delete Predictions (All) using UUID filter trick
         // neq '00000000-...' usually matches all standard UUIDs
-        const { error: predError, count: predCount } = await supabase.from('predictions')
+        const { error: predError, count: predCount } = await supabaseAdmin.from('predictions')
             .delete({ count: 'exact' })
             .neq('id', '00000000-0000-0000-0000-000000000000');
 
@@ -1319,15 +1319,15 @@ window.resetApp = async () => {
 
         // 3. Reset ALL Profile Points (Everyone gets 0)
         // Diagnostic
-        const { data: userBefore } = await supabase.from('profiles').select('points').eq('id', user.id).single();
+        const { data: userBefore } = await supabaseAdmin.from('profiles').select('points').eq('id', user.id).single();
         const startPoints = userBefore ? userBefore.points : 'unknown';
 
-        const { error: profileError, count: profileCount } = await supabase.from('profiles')
+        const { error: profileError, count: profileCount } = await supabaseAdmin.from('profiles')
             .update({ points: 0, exact_score_count: 0 })
             .neq('id', '00000000-0000-0000-0000-000000000000') // Trick to update all records
             .select('*', { count: 'exact' });
 
-        const { data: userAfter } = await supabase.from('profiles').select('points').eq('id', user.id).single();
+        const { data: userAfter } = await supabaseAdmin.from('profiles').select('points').eq('id', user.id).single();
         const endPoints = userAfter ? userAfter.points : 'unknown';
 
         if (profileError) {
@@ -1407,8 +1407,8 @@ window.deleteAnyUser = async (id, name) => {
     console.log(`[DELETE USER] Deleting single user: ${id} `);
 
     try {
-        await supabase.from('predictions').delete().eq('user_id', id);
-        await supabase.from('profiles').delete().eq('id', id);
+        await supabaseAdmin.from('predictions').delete().eq('user_id', id);
+        await supabaseAdmin.from('profiles').delete().eq('id', id);
 
         const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
 
@@ -1463,7 +1463,7 @@ window.resetAllUsers = async () => {
     const secret = prompt('Escribe "DELETE" para confirmar borrado de TODOS los usuarios (excepto admins).');
     if (secret !== 'DELETE') return;
     try {
-        await supabase.from('profiles').delete().neq('role', 'admin');
+        await supabaseAdmin.from('profiles').delete().neq('role', 'admin');
         alert('Base de datos depurada.');
         await loadUsers();
     } catch (err) { console.error(err); alert('Error crítico'); }
@@ -1684,7 +1684,7 @@ window.loadUsersForDelete = async () => {
     try {
         // Load profiles using standard client (same as main table)
         // Select * to match permissions of main table load
-        const { data: profiles, error } = await supabase.from('profiles').select('*');
+        const { data: profiles, error } = await supabaseAdmin.from('profiles').select('*');
 
         if (error) throw error;
 
