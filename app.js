@@ -1703,7 +1703,7 @@ window.renderComparison = async (selectedMatchday) => {
 
         // Build table header
         let tableHeaderHtml = `
-            <th class="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest sticky left-0 bg-background-dark z-20 min-w-[200px]">Partido</th>
+            <th class="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest md:sticky md:left-0 bg-surface-dark z-20 min-w-[150px] md:min-w-[200px]">Partido</th>
         `;
 
         profiles.forEach(p => {
@@ -1750,7 +1750,7 @@ window.renderComparison = async (selectedMatchday) => {
 
             let matchRow = `
                 <tr class="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
-                    <td class="p-4 sticky left-0 bg-background-dark/95 backdrop-blur z-10 flex flex-col items-start gap-1 justify-center">
+                    <td class="p-4 md:sticky md:left-0 bg-surface-dark/95 md:backdrop-blur z-10 flex flex-col items-start gap-1 justify-center min-w-[150px] md:min-w-[200px]">
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-bold text-slate-300 w-8 truncate uppercase">${match.home_team}</span>
                             <img src="${getFlagUrl(match.home_team)}" class="w-5 h-5 rounded-full object-cover shadow border border-slate-700">
@@ -1821,7 +1821,7 @@ window.renderComparison = async (selectedMatchday) => {
             <div class="overflow-x-auto w-full rounded-xl border border-white/10 bg-background-dark/30 custom-scrollbar">
                 <table class="w-full border-collapse">
                     <thead>
-                        <tr class="bg-background-dark border-b border-white/10">
+                        <tr class="bg-surface-dark border-b border-white/10">
                             ${tableHeaderHtml}
                         </tr>
                     </thead>
