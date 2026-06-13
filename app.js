@@ -1849,7 +1849,8 @@ window.renderComparison = async (selectedMatchday) => {
             <div class="flex flex-col items-center justify-center py-12 text-center">
                 <span class="material-icons text-red-500 text-4xl mb-3">error_outline</span>
                 <h4 class="text-lg font-bold text-white mb-1">Error al Cargar Comparativa</h4>
-                <p class="text-slate-400 text-sm mb-4">No pudimos obtener la información en este momento.</p>
+                <p class="text-slate-400 text-sm mb-2">No pudimos obtener la información en este momento.</p>
+                <p class="text-red-400 text-xs mb-4 font-mono select-text bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg max-w-md mx-auto break-all">${err.message || JSON.stringify(err) || err}</p>
                 <button onclick="renderComparison(${selectedMatchday})" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/5 font-semibold text-xs">
                     Reintentar
                 </button>
