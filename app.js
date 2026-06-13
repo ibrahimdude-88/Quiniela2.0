@@ -1686,11 +1686,9 @@ window.renderComparison = async (selectedMatchday) => {
 
         if (profError) throw profError;
 
-        // Fetch predictions of paid users for these matches
+        // Fetch predictions of paid users for these matches bypassing RLS via RPC
         const { data: allPreds, error: predsError } = await supabase
-            .from('predictions')
-            .select('*')
-            .in('match_id', matchIds);
+            .rpc('get_comparison_predictions', { p_matchday: selectedMatchday });
 
         if (predsError) throw predsError;
 
