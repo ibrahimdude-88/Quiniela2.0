@@ -925,7 +925,8 @@ window.saveAllPredictions = async () => {
             match_id: parseInt(matchId),
             home_score: item.home_score,
             away_score: item.away_score,
-            penalty_winner: item.penalty_winner
+            penalty_winner: item.penalty_winner,
+            created_at: new Date().toISOString()
         };
     });
 
@@ -944,7 +945,8 @@ window.saveAllPredictions = async () => {
                 match_id: row.match_id,
                 home_score: row.home_score,
                 away_score: row.away_score,
-                penalty_winner: row.penalty_winner
+                penalty_winner: row.penalty_winner,
+                created_at: row.created_at
             };
         });
 
@@ -1020,6 +1022,7 @@ function setupEventListeners() {
         }
 
         try {
+            const nowIso = new Date().toISOString();
             const { data, error } = await supabase
                 .from('predictions')
                 .upsert({
@@ -1027,7 +1030,8 @@ function setupEventListeners() {
                     match_id: matchId,
                     home_score: homeScore,
                     away_score: awayScore,
-                    penalty_winner: penaltyWinner
+                    penalty_winner: penaltyWinner,
+                    created_at: nowIso
                 }, { onConflict: 'user_id, match_id' });
 
             if (error) throw error;
@@ -1038,7 +1042,8 @@ function setupEventListeners() {
                 match_id: matchId,
                 home_score: homeScore,
                 away_score: awayScore,
-                penalty_winner: penaltyWinner
+                penalty_winner: penaltyWinner,
+                created_at: nowIso
             };
 
             console.log('[SAVE] Prediction saved successfully');
@@ -1552,6 +1557,307 @@ window.showRankingCelebration = (rank) => {
             inner.classList.add('scale-100');
         }
     }, 10);
+};
+
+// ==========================================
+// ── Prediction Comparison Feature ─────────
+// ==========================================
+
+window.activeComparisonMatchday = 1;
+
+window.openComparisonModal = () => {
+    openModal('comparison-modal');
+    window.activeComparisonMatchday = currentMatchday;
+    window.renderComparison(window.activeComparisonMatchday);
+};
+
+window.changeComparisonMatchday = (md) => {
+    window.activeComparisonMatchday = md;
+    window.renderComparison(md);
+};
+
+window.goToCaptureMatchday = (md) => {
+    closeModal('comparison-modal');
+    currentMatchday = md;
+    
+    // Update active tab styling on main page matchday buttons
+    document.querySelectorAll('button[data-matchday]').forEach(btn => {
+        const btnMd = parseInt(btn.dataset.matchday);
+        if (btnMd === md) {
+            btn.className = 'px-6 py-2.5 rounded-full bg-primary text-white font-bold shadow-lg shadow-primary/25 transition-all transform hover:-translate-y-0.5 whitespace-nowrap shrink-0';
+        } else {
+            btn.className = 'px-6 py-2.5 rounded-full bg-surface-dark border border-white/5 text-slate-400 font-bold hover:text-white hover:bg-white/5 transition-all whitespace-nowrap shrink-0';
+        }
+    });
+
+    renderMatches();
+    
+    setTimeout(() => {
+        const el = document.getElementById('matches-list');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+};
+
+window.renderComparison = async (selectedMatchday) => {
+    // Update active state of tabs in comparison modal
+    document.querySelectorAll('.comparison-tab-btn').forEach(btn => {
+        const md = parseInt(btn.getAttribute('data-comp-matchday'));
+        if (md === selectedMatchday) {
+            btn.className = 'comparison-tab-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-primary text-white shadow-lg shadow-primary/25';
+        } else {
+            btn.className = 'comparison-tab-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-surface-dark border border-white/5 text-slate-400 hover:text-white hover:bg-white/5';
+        }
+    });
+
+    const bodyEl = document.getElementById('comparison-body');
+    if (!bodyEl) return;
+
+    // Filter matches for selected matchday
+    const mdMatches = matches.filter(m => m.matchday === selectedMatchday);
+    if (mdMatches.length === 0) {
+        bodyEl.innerHTML = `<p class="text-center text-slate-400 py-8">No hay partidos para esta jornada.</p>`;
+        return;
+    }
+
+    // Check if the current user has completed capturing all predictions for this matchday
+    const completedMatchesCount = mdMatches.filter(m => {
+        const p = predictions[m.id];
+        return p && p.home_score !== null && p.home_score !== undefined && p.away_score !== null && p.away_score !== undefined;
+    }).length;
+    
+    const isCompleted = completedMatchesCount === mdMatches.length;
+
+    // Helper to get friendly name for matchday
+    const getFriendlyMatchdayName = (md) => {
+        switch (md) {
+            case 4: return '16vos';
+            case 5: return '8vos';
+            case 6: return '4tos';
+            case 7: return 'Semis';
+            case 8: return 'Final';
+            default: return `Jornada ${md}`;
+        }
+    };
+
+    if (!isCompleted) {
+        bodyEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 px-4 text-center max-w-md mx-auto">
+                <div class="w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center border border-orange-500/20 mb-6 text-orange-400">
+                    <span class="material-icons text-3xl">lock</span>
+                </div>
+                <h4 class="text-xl font-bold text-white mb-2">Comparativa Bloqueada</h4>
+                <p class="text-slate-400 text-sm mb-6 leading-relaxed">
+                    Para poder ver los pronósticos de los demás usuarios, primero debes terminar de capturar todos tus pronósticos para la <strong>${getFriendlyMatchdayName(selectedMatchday)}</strong>.
+                </p>
+                <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-8">
+                    <div class="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                        <span class="text-slate-400">Tu Progreso</span>
+                        <span class="text-primary">${completedMatchesCount} / ${mdMatches.length} Partidos</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-background-dark rounded-full overflow-hidden">
+                        <div class="h-full bg-primary rounded-full transition-all duration-500" style="width: ${(completedMatchesCount / mdMatches.length) * 100}%"></div>
+                    </div>
+                </div>
+                <button onclick="window.goToCaptureMatchday(${selectedMatchday})" 
+                        class="px-6 py-3 rounded-xl bg-primary hover:bg-emerald-500 text-white font-bold shadow-lg shadow-primary/25 transition-all transform hover:-translate-y-0.5">
+                    Ir a Completar Pronósticos
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    bodyEl.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12">
+            <span class="material-icons animate-spin text-primary text-4xl mb-3">refresh</span>
+            <p class="text-slate-400 text-sm">Cargando pronósticos de los usuarios...</p>
+        </div>
+    `;
+
+    try {
+        const matchIds = mdMatches.map(m => m.id);
+
+        // Fetch paid profiles
+        const { data: profiles, error: profError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('paid', true)
+            .order('points', { ascending: false });
+
+        if (profError) throw profError;
+
+        // Fetch predictions of paid users for these matches
+        const { data: allPreds, error: predsError } = await supabase
+            .from('predictions')
+            .select('*')
+            .in('match_id', matchIds);
+
+        if (predsError) throw predsError;
+
+        // Group predictions: user_id -> match_id -> prediction
+        const predMap = {};
+        allPreds.forEach(p => {
+            if (!predMap[p.user_id]) predMap[p.user_id] = {};
+            predMap[p.user_id][p.match_id] = p;
+        });
+
+        // Build table header
+        let tableHeaderHtml = `
+            <th class="p-4 text-left text-xs font-bold text-slate-500 uppercase tracking-widest sticky left-0 bg-background-dark z-20 min-w-[200px]">Partido</th>
+        `;
+
+        profiles.forEach(p => {
+            const isMe = p.id === currentUser.profile.id;
+            
+            // Calculate latest update time for this user in this matchday
+            const userPreds = allPreds.filter(pred => pred.user_id === p.id);
+            let latestUpdateStr = '';
+            if (userPreds.length > 0) {
+                const dates = userPreds.map(pred => new Date(pred.created_at)).filter(d => !isNaN(d));
+                if (dates.length > 0) {
+                    const maxDate = new Date(Math.max(...dates));
+                    const day = maxDate.getDate();
+                    const month = maxDate.toLocaleString('es-MX', { month: 'short' });
+                    const time = maxDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                    latestUpdateStr = `${day} ${month}, ${time}`;
+                }
+            }
+
+            tableHeaderHtml += `
+                <th class="p-4 text-center text-xs font-bold text-slate-200 uppercase tracking-widest min-w-[150px]">
+                    <div class="flex flex-col items-center">
+                        <span class="${isMe ? 'text-primary font-black' : 'text-slate-200'}">${p.username || 'Usuario'} ${isMe ? '(Tú)' : ''}</span>
+                        ${latestUpdateStr ? `<span class="text-[9px] text-slate-500 font-normal lowercase tracking-normal mt-1 flex items-center gap-0.5"><span class="material-icons text-[10px]">edit_calendar</span> ${latestUpdateStr}</span>` : '<span class="text-[9px] text-slate-600 font-normal lowercase mt-1">Sin captura</span>'}
+                    </div>
+                </th>
+            `;
+        });
+
+        let tableRowsHtml = '';
+
+        mdMatches.forEach(match => {
+            const isFinal = match.status === 'f';
+            
+            let realScoreHtml = '';
+            if (match.home_score !== null && match.away_score !== null) {
+                realScoreHtml = `
+                    <div class="mt-1 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded text-[10px] font-mono font-extrabold text-primary inline-flex items-center gap-1 shadow-sm">
+                        <span>Real:</span>
+                        <span>${match.home_score} - ${match.away_score}</span>
+                    </div>
+                `;
+            }
+
+            let matchRow = `
+                <tr class="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
+                    <td class="p-4 sticky left-0 bg-background-dark/95 backdrop-blur z-10 flex flex-col items-start gap-1 justify-center">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-300 w-8 truncate uppercase">${match.home_team}</span>
+                            <img src="${getFlagUrl(match.home_team)}" class="w-5 h-5 rounded-full object-cover shadow border border-slate-700">
+                            <span class="text-xs text-slate-600 font-bold">vs</span>
+                            <img src="${getFlagUrl(match.away_team)}" class="w-5 h-5 rounded-full object-cover shadow border border-slate-700">
+                            <span class="text-xs font-bold text-slate-300 w-8 truncate uppercase">${match.away_team}</span>
+                        </div>
+                        ${realScoreHtml}
+                    </td>
+            `;
+
+            profiles.forEach(p => {
+                const userPred = predMap[p.id] ? predMap[p.id][match.id] : null;
+                let predCellContent = '';
+                let cellBg = '';
+
+                if (userPred) {
+                    const pts = userPred.points_earned || 0;
+                    let pointsBadge = '';
+                    if (isFinal) {
+                        if (pts === 8) {
+                            pointsBadge = `<span class="mt-1 flex items-center justify-center gap-0.5 text-[8px] font-extrabold bg-accent-gold/20 border border-accent-gold/40 text-accent-gold px-1.5 py-0.5 rounded-full">+8 pts</span>`;
+                            cellBg = 'bg-accent-gold/[0.02]';
+                        } else if (pts > 0) {
+                            pointsBadge = `<span class="mt-1 flex items-center justify-center gap-0.5 text-[8px] font-extrabold bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-1.5 py-0.5 rounded-full">+${pts} pts</span>`;
+                            cellBg = 'bg-emerald-500/[0.01]';
+                        } else {
+                            pointsBadge = `<span class="mt-1 flex items-center justify-center gap-0.5 text-[8px] font-extrabold bg-slate-800 border border-slate-700 text-slate-500 px-1.5 py-0.5 rounded-full">+0 pts</span>`;
+                        }
+                    }
+
+                    const pDate = new Date(userPred.created_at);
+                    let pDateStr = '';
+                    if (!isNaN(pDate)) {
+                        pDateStr = pDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                    }
+
+                    let penText = '';
+                    if (match.matchday >= 4 && userPred.home_score === userPred.away_score && userPred.penalty_winner) {
+                        penText = ` <span class="text-[9px] text-slate-500 font-bold" title="Ganador penales: ${userPred.penalty_winner === 'home' ? 'Local' : 'Visitante'}">(${userPred.penalty_winner === 'home' ? 'L' : 'V'})</span>`;
+                    }
+
+                    predCellContent = `
+                        <div class="flex flex-col items-center">
+                            <span class="text-sm font-bold text-slate-200">${userPred.home_score} - ${userPred.away_score}${penText}</span>
+                            ${pDateStr ? `<span class="text-[8px] text-slate-500 mt-0.5">${pDateStr}</span>` : ''}
+                            ${pointsBadge}
+                        </div>
+                    `;
+                } else {
+                    predCellContent = `
+                        <span class="text-xs text-slate-600 font-bold">-</span>
+                    `;
+                }
+
+                matchRow += `
+                    <td class="p-4 text-center border-l border-white/5 ${cellBg}">
+                        ${predCellContent}
+                    </td>
+                `;
+            });
+
+            matchRow += `</tr>`;
+            tableRowsHtml += matchRow;
+        });
+
+        bodyEl.innerHTML = `
+            <div class="overflow-x-auto w-full rounded-xl border border-white/10 bg-background-dark/30 custom-scrollbar">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-background-dark border-b border-white/10">
+                            ${tableHeaderHtml}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRowsHtml}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-4 items-center justify-between text-[10px] text-slate-500 px-2">
+                <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded bg-accent-gold/20 border border-accent-gold/40 inline-block"></span>
+                    <span>Marcador Exacto (+8 pts)</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded bg-emerald-500/20 border border-emerald-500/40 inline-block"></span>
+                    <span>Acierto Ganador (+3 pts o +5 pts)</span>
+                </div>
+                <div>
+                    <span>* Las horas muestran la captura individual.</span>
+                </div>
+            </div>
+        `;
+
+    } catch (err) {
+        console.error("Error building comparison table:", err);
+        bodyEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 text-center">
+                <span class="material-icons text-red-500 text-4xl mb-3">error_outline</span>
+                <h4 class="text-lg font-bold text-white mb-1">Error al Cargar Comparativa</h4>
+                <p class="text-slate-400 text-sm mb-4">No pudimos obtener la información en este momento.</p>
+                <button onclick="renderComparison(${selectedMatchday})" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/5 font-semibold text-xs">
+                    Reintentar
+                </button>
+            </div>
+        `;
+    }
 };
 
 console.log('[APP] Registering DOMContentLoaded listener');

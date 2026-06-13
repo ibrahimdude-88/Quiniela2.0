@@ -278,7 +278,7 @@
                         La jornada está por comenzar. Revisa tus pronósticos y asegura tu lugar en el ranking global.
                     </p>
                     <div class="flex items-center gap-4">
-                        <button onclick="document.getElementById('matches-list').scrollIntoView({behavior: 'smooth'})"
+                        <button onclick="openComparisonModal()"
                             class="px-6 py-3 rounded-xl bg-primary hover:bg-emerald-500 text-white font-bold shadow-lg shadow-primary/25 transition-all transform hover:-translate-y-1">
                             Ver Partidos
                         </button>
@@ -453,6 +453,41 @@
 
         <!-- Modals -->
 
+        <!-- Comparison Modal -->
+        <div id="comparison-modal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+            <div
+                class="bg-surface-dark w-full max-w-5xl mx-4 rounded-2xl border border-white/10 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[85vh]">
+                <div class="p-5 border-b border-white/10 flex justify-between items-center bg-background-dark">
+                    <h3 class="text-lg font-bold flex items-center gap-2 text-white">
+                        <span class="material-icons text-primary">compare_arrows</span> Comparativa de Pronósticos
+                    </h3>
+                    <button onclick="closeModal('comparison-modal')"
+                        class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+                        <span class="material-icons text-sm">close</span>
+                    </button>
+                </div>
+                
+                <!-- Matchday Selector (Jornadas) inside Modal -->
+                <div class="p-4 bg-background-dark/30 border-b border-white/5 overflow-x-auto no-scrollbar flex items-center gap-2">
+                    <button onclick="changeComparisonMatchday(1)" class="comparison-tab-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-surface-dark border border-white/5 text-slate-400 hover:text-white hover:bg-white/5" data-comp-matchday="1">Jornada 1</button>
+                    <button onclick="changeComparisonMatchday(2)" class="comparison-tab-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-surface-dark border border-white/5 text-slate-400 hover:text-white hover:bg-white/5" data-comp-matchday="2">Jornada 2</button>
+                    <button onclick="changeComparisonMatchday(3)" class="comparison-tab-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-surface-dark border border-white/5 text-slate-400 hover:text-white hover:bg-white/5" data-comp-matchday="3">Jornada 3</button>
+                    <button onclick="changeComparisonMatchday(4)" class="comparison-tab-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-surface-dark border border-white/5 text-slate-400 hover:text-white hover:bg-white/5" data-comp-matchday="4">16vos</button>
+                    <button onclick="changeComparisonMatchday(5)" class="comparison-tab-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-surface-dark border border-white/5 text-slate-400 hover:text-white hover:bg-white/5" data-comp-matchday="5">8vos</button>
+                    <button onclick="changeComparisonMatchday(6)" class="comparison-tab-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-surface-dark border border-white/5 text-slate-400 hover:text-white hover:bg-white/5" data-comp-matchday="6">4tos</button>
+                    <button onclick="changeComparisonMatchday(7)" class="comparison-tab-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-surface-dark border border-white/5 text-slate-400 hover:text-white hover:bg-white/5" data-comp-matchday="7">Semi</button>
+                    <button onclick="changeComparisonMatchday(8)" class="comparison-tab-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap bg-surface-dark border border-white/5 text-slate-400 hover:text-white hover:bg-white/5" data-comp-matchday="8">Final</button>
+                </div>
+
+                <div id="comparison-body" class="p-6 overflow-y-auto custom-scrollbar flex-1">
+                    <div class="flex justify-center p-8">
+                        <span class="material-icons animate-spin text-primary text-4xl">refresh</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Standings Modal -->
         <div id="standings-modal"
             class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
@@ -594,6 +629,7 @@
                 }
             }
             function closeAllModals() {
+                closeModal('comparison-modal');
                 closeModal('standings-modal');
                 closeModal('ranking-modal');
                 const achModal = document.getElementById('achievements-modal');
