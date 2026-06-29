@@ -743,54 +743,53 @@
                 emptyEl.classList.add('hidden');
 
                 try {
+                    // Fetch live feed to get real-time score, elapsed time, scorers
                     const res = await fetch('https://worldcup26.ir/get/games');
                     if (!res.ok) throw new Error('API error');
                     const data = await res.json();
-                    const games = data.games;
+                    const games = data.games || [];
 
-                    // Get today's date in local browser timezone (MM/DD/YYYY format)
+                    // Get today's local date (e.g. "6/29/2026")
                     const today = new Date();
-                    const month = String(today.getMonth() + 1).padStart(2, '0');
-                    const day = String(today.getDate()).padStart(2, '0');
-                    const year = today.getFullYear();
-                    const todayFormatted = `${month}/${day}/${year}`;
+                    const todayLocalDateStr = today.toLocaleDateString('en-US');
 
-                    // Filter matches for today
-                    let matchesToShow = games.filter(g => {
-                        if (!g.local_date) return false;
-                        const matchDate = g.local_date.split(' ')[0];
-                        return matchDate === todayFormatted;
+                    // Filter matches in local timezone for today
+                    let matchesToShow = (window.matches || []).filter(m => {
+                        if (!m.date) return false;
+                        const matchLocalDateStr = new Date(m.date).toLocaleDateString('en-US');
+                        return matchLocalDateStr === todayLocalDateStr;
                     });
 
                     let dateMessageHTML = '';
 
                     if (matchesToShow.length === 0) {
-                        // Find closest date with matches
-                        const allDates = [...new Set(games.filter(g => g.local_date).map(g => g.local_date.split(' ')[0]))];
-                        if (allDates.length > 0) {
+                        // Find closest local date with matches
+                        const allLocalDates = [...new Set((window.matches || []).filter(m => m.date).map(m => new Date(m.date).toLocaleDateString('en-US')))];
+                        if (allLocalDates.length > 0) {
                             const todayMs = today.getTime();
-                            allDates.sort((a, b) => {
+                            allLocalDates.sort((a, b) => {
                                 const distA = Math.abs(new Date(a).getTime() - todayMs);
                                 const distB = Math.abs(new Date(b).getTime() - todayMs);
                                 return distA - distB;
                             });
-                            const closestDate = allDates[0];
-                            matchesToShow = games.filter(g => g.local_date && g.local_date.split(' ')[0] === closestDate);
+                            const closestLocalDateStr = allLocalDates[0];
+                            matchesToShow = (window.matches || []).filter(m => m.date && new Date(m.date).toLocaleDateString('en-US') === closestLocalDateStr);
                             
-                            const [m, d, y] = closestDate.split('/');
+                            const [mMonth, mDay, mYear] = closestLocalDateStr.split('/');
+                            const formattedDate = `${String(mDay).padStart(2, '0')}/${String(mMonth).padStart(2, '0')}/${mYear}`;
                             dateMessageHTML = `
                                 <div class="col-span-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-400 flex items-center gap-2 mb-2">
                                     <span class="material-icons text-indigo-400 text-sm">info</span>
-                                    <span>Hoy no hay partidos programados. Mostrando jornada del <strong>${d}/${m}/${y}</strong>.</span>
+                                    <span>Hoy no hay partidos programados. Mostrando jornada del <strong>${formattedDate}</strong>.</span>
                                 </div>
                             `;
                         }
                     } else {
-                        const [m, d, y] = todayFormatted.split('/');
+                        const todayFormatted = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
                         dateMessageHTML = `
                             <div class="col-span-full bg-indigo-500/5 border border-indigo-500/10 rounded-xl px-4 py-2.5 text-xs text-indigo-300 flex items-center gap-2 mb-2">
                                 <span class="material-icons text-indigo-400 text-sm">today</span>
-                                <span>Partidos programados para hoy: <strong>${d}/${m}/${y}</strong></span>
+                                <span>Partidos programados para hoy: <strong>${todayFormatted}</strong></span>
                             </div>
                         `;
                     }
@@ -801,13 +800,49 @@
                         return;
                     }
 
+                    // Map DB matches to API game feed for live scores, elapsed time and scorers
+                    const resolvedGames = matchesToShow.map(m => {
+                        const apiGame = games.find(g => {
+                            const gHomeCode = resolveTeamCode(g.home_team_name_en);
+                            const gAwayCode = resolveTeamCode(g.away_team_name_en);
+                            return (m.home_team === gHomeCode && m.away_team === gAwayCode) ||
+                                   (m.home_team === gAwayCode && m.away_team === gHomeCode);
+                        });
+
+                        let isFinished = m.status === 'f';
+                        let isLive = m.status === 'live';
+                        let timeElapsed = m.live_minute || '';
+                        let homeScore = m.home_score;
+                        let awayScore = m.away_score;
+                        let apiGameData = apiGame || null;
+
+                        if (apiGame) {
+                            isFinished = apiGame.finished === 'TRUE';
+                            isLive = apiGame.finished === 'FALSE' && apiGame.time_elapsed !== 'notstarted';
+                            timeElapsed = apiGame.time_elapsed;
+
+                            const apiHomeCode = resolveTeamCode(apiGame.home_team_name_en);
+                            const isSwapped = m.home_team !== apiHomeCode;
+                            homeScore = isSwapped ? parseInt(apiGame.away_score) : parseInt(apiGame.home_score);
+                            awayScore = isSwapped ? parseInt(apiGame.home_score) : parseInt(apiGame.away_score);
+                        }
+
+                        return {
+                            dbMatch: m,
+                            apiGame: apiGameData,
+                            isLive,
+                            isFinished,
+                            timeElapsed,
+                            homeScore,
+                            awayScore
+                        };
+                    });
+
                     // Sort to show live matches first
-                    matchesToShow.sort((a, b) => {
-                        const aLive = a.finished === 'FALSE' && a.time_elapsed !== 'notstarted';
-                        const bLive = b.finished === 'FALSE' && b.time_elapsed !== 'notstarted';
-                        if (aLive && !bLive) return -1;
-                        if (!aLive && bLive) return 1;
-                        return parseInt(a.id) - parseInt(b.id);
+                    resolvedGames.sort((a, b) => {
+                        if (a.isLive && !b.isLive) return -1;
+                        if (!a.isLive && b.isLive) return 1;
+                        return parseInt(a.dbMatch.id) - parseInt(b.dbMatch.id);
                     });
 
                     const getFlagUrl = (code) => {
@@ -829,16 +864,14 @@
                         return `https://flagcdn.com/w80/${mapped}.png`;
                     };
 
-                    listEl.innerHTML = dateMessageHTML + matchesToShow.map(g => {
-                        const isLive = g.finished === 'FALSE' && g.time_elapsed !== 'notstarted';
-                        const isFinished = g.finished === 'TRUE';
+                    listEl.innerHTML = dateMessageHTML + resolvedGames.map(game => {
+                        const m = game.dbMatch;
+                        const isLive = game.isLive;
+                        const isFinished = game.isFinished;
                         const isPending = !isLive && !isFinished;
 
-                        const homeCode = resolveTeamCode(g.home_team_name_en);
-                        const awayCode = resolveTeamCode(g.away_team_name_en);
-
-                        const homeFlag = getFlagUrl(homeCode);
-                        const awayFlag = getFlagUrl(awayCode);
+                        const homeFlag = getFlagUrl(m.home_team);
+                        const awayFlag = getFlagUrl(m.away_team);
 
                         const parseScorers = (scorersJson) => {
                             if (!scorersJson || scorersJson === 'null') return '';
@@ -857,14 +890,23 @@
                             }
                         };
 
-                        const homeScorersHTML = parseScorers(g.home_scorers);
-                        const awayScorersHTML = parseScorers(g.away_scorers);
+                        let homeScorersHTML = '';
+                        let awayScorersHTML = '';
+
+                        if (game.apiGame) {
+                            const apiHomeCode = resolveTeamCode(game.apiGame.home_team_name_en);
+                            const isSwapped = m.home_team !== apiHomeCode;
+                            homeScorersHTML = parseScorers(isSwapped ? game.apiGame.away_scorers : game.apiGame.home_scorers);
+                            awayScorersHTML = parseScorers(isSwapped ? game.apiGame.home_scorers : game.apiGame.away_scorers);
+                        }
 
                         let centerHTML = '';
                         let badgeHTML = '';
 
                         if (isPending) {
-                            const timeStr = g.local_date ? g.local_date.split(' ')[1] : '--:--';
+                            // Convert UTC date to local time format (e.g. 7:00 PM) based on browser timezone
+                            const matchLocalDate = new Date(m.date);
+                            const timeStr = matchLocalDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
                             centerHTML = `
                                 <div class="flex flex-col items-center justify-center">
                                     <span class="text-xs font-semibold text-slate-500 mb-1">VS</span>
@@ -882,9 +924,9 @@
                         } else {
                             centerHTML = `
                                 <div class="flex items-center gap-3">
-                                    <span class="text-3xl font-black text-white">${g.home_score}</span>
+                                    <span class="text-3xl font-black text-white">${game.homeScore !== null ? game.homeScore : 0}</span>
                                     <span class="text-slate-600 font-bold">-</span>
-                                    <span class="text-3xl font-black text-white">${g.away_score}</span>
+                                    <span class="text-3xl font-black text-white">${game.awayScore !== null ? game.awayScore : 0}</span>
                                 </div>
                             `;
 
@@ -892,7 +934,7 @@
                                 badgeHTML = `
                                     <div class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 animate-pulse border border-red-500/20">
                                         <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                                        ${g.time_elapsed}
+                                        ${game.timeElapsed || 'Vivo'}
                                     </div>
                                 `;
                             } else if (isFinished) {
@@ -904,24 +946,28 @@
                             }
                         }
 
-                        const groupName = g.group === 'R32' ? '16vos de Final' :
-                                          g.group === 'R16' ? 'Octavos de Final' :
-                                          g.group === 'QF' ? 'Cuartos de Final' :
-                                          g.group === 'SF' ? 'Semifinal' :
-                                          g.group === '3rd' ? 'Tercer Lugar' :
-                                          g.group === 'FI' ? 'Final' : `Grupo ${g.group}`;
+                        const group = m.group_name;
+                        const groupName = group === 'R32' ? '16vos de Final' :
+                                          group === 'R16' ? 'Octavos de Final' :
+                                          group === 'QF' ? 'Cuartos de Final' :
+                                          group === 'SF' ? 'Semifinal' :
+                                          group === '3rd' ? 'Tercer Lugar' :
+                                          group === 'FI' ? 'Final' : `Grupo ${group}`;
+
+                        const homeName = _nameMap[m.home_team] || m.home_team;
+                        const awayName = _nameMap[m.away_team] || m.away_team;
 
                         return `
                             <div class="bg-surface-dark border border-white/10 rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col justify-between transition-all hover:border-white/20">
                                 <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
                                     <span>${groupName}</span>
-                                    <span>Partido #${g.id}</span>
+                                    <span>Partido #${m.id}</span>
                                 </div>
                                 <div class="flex items-center justify-between gap-4 mb-4">
                                     <!-- Team A -->
                                     <div class="flex flex-col items-center text-center flex-1 min-w-0">
                                         <img src="${homeFlag}" class="w-10 h-6 object-cover rounded shadow-sm mb-2 border border-white/5 bg-slate-800">
-                                        <span class="text-sm font-bold text-white truncate w-full">${g.home_team_name_en}</span>
+                                        <span class="text-sm font-bold text-white truncate w-full">${homeName}</span>
                                         <div class="mt-2 w-full max-h-[60px] overflow-y-auto no-scrollbar">${homeScorersHTML}</div>
                                     </div>
 
@@ -934,7 +980,7 @@
                                     <!-- Team B -->
                                     <div class="flex flex-col items-center text-center flex-1 min-w-0">
                                         <img src="${awayFlag}" class="w-10 h-6 object-cover rounded shadow-sm mb-2 border border-white/5 bg-slate-800">
-                                        <span class="text-sm font-bold text-white truncate w-full">${g.away_team_name_en}</span>
+                                        <span class="text-sm font-bold text-white truncate w-full">${awayName}</span>
                                         <div class="mt-2 w-full max-h-[60px] overflow-y-auto no-scrollbar">${awayScorersHTML}</div>
                                     </div>
                                 </div>
