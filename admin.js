@@ -667,8 +667,10 @@ async function calculatePointsManually(matchId, homeScore, awayScore) {
             predWinnerSign = -1;
         } else {
             if (isKnockout) {
-                if (p.penalty_winner === 'home') predWinnerSign = 1;
-                else if (p.penalty_winner === 'away') predWinnerSign = -1;
+                if (homeScore === awayScore) {
+                    if (p.penalty_winner === 'home') predWinnerSign = 1;
+                    else if (p.penalty_winner === 'away') predWinnerSign = -1;
+                }
             }
         }
 
@@ -1143,43 +1145,7 @@ window.simulateGroupStageResults = async () => {
 
             // 2. Calculate Points MANUALLY for ALL predictions for this match
             // This ensures test users get points even if RPC fails or triggers are missing
-            const { data: currentPreds } = await supabaseAdmin.from('predictions')
-                .select('*')
-                .eq('match_id', match.id);
-
-            if (currentPreds) {
-                for (const p of currentPreds) {
-                    // Skip if no prediction
-                    if (p.home_score === null || p.away_score === null || p.home_score === undefined || p.away_score === undefined) continue;
-
-                    let pts = 0;
-                    const pHome = Number(p.home_score);
-                    const pAway = Number(p.away_score);
-                    const mHome = Number(newHomeScore);
-                    const mAway = Number(newAwayScore);
-
-                    // Exact Match (3 points for winner + 5 bonus = 8 total)
-                    if (pHome === mHome && pAway === mAway) {
-                        pts = 8;
-                    } else {
-                        // Check Winner / Draw
-                        const realDiff = mHome - mAway;
-                        const predDiff = pHome - pAway;
-                        const realWinner = Math.sign(realDiff); // 1 (Home), -1 (Away), 0 (Draw)
-                        const predWinner = Math.sign(predDiff);
-
-                        if (realWinner === predWinner) {
-                            pts = 3; // Correct result only
-                        }
-                    }
-
-                    if (pts !== p.points_earned) {
-                        await supabaseAdmin.from('predictions')
-                            .update({ points_earned: pts })
-                            .eq('id', p.id);
-                    }
-                }
-            }
+            await calculatePointsManually(match.id, Number(newHomeScore), Number(newAwayScore));
 
             processed++;
         }
@@ -3058,23 +3024,7 @@ window.runSimulation = async () => {
                 } else {
                     matchOk++;
                     // Recalculate points for THIS match for all users
-                    const { data: preds } = await supabaseAdmin.from('predictions').select('*').eq('match_id', match.id);
-                    if (preds) {
-                        for (const p of preds) {
-                            if (p.home_score === null || p.away_score === null) continue;
-                            let pts = 0;
-                            const pH = Number(p.home_score), pA = Number(p.away_score);
-                            const mH = Number(newHome), mA = Number(newAway);
-                            if (pH === mH && pA === mA) {
-                                pts = 8;
-                            } else if (Math.sign(mH - mA) === Math.sign(pH - pA)) {
-                                pts = 3;
-                            }
-                            if (pts !== p.points_earned) {
-                                await supabaseAdmin.from('predictions').update({ points_earned: pts }).eq('id', p.id);
-                            }
-                        }
-                    }
+                    await calculatePointsManually(match.id, Number(newHome), Number(newAway));
                 }
                 tick(`Partidos: ${matchOk}/${targetMatches.length}`);
                 await new Promise(r => setTimeout(r, 20));
