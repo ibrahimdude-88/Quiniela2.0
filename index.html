@@ -722,9 +722,11 @@
                         const valCleaned = val.toLowerCase();
                         if (cleaned === valCleaned || cleaned.includes(valCleaned) || valCleaned.includes(cleaned)) {
                             return code;
-                        }
                     }
-                       async function loadLiveScores() {
+                }
+                return null;
+            }
+            async function loadLiveScores() {
                 const loadingEl = document.getElementById('live-scores-loading');
                 const listEl = document.getElementById('live-scores-list');
                 const emptyEl = document.getElementById('live-scores-empty');
