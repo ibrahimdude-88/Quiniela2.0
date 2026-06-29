@@ -724,10 +724,7 @@
                             return code;
                         }
                     }
-                }
-                return null;
-            }
-            async function loadLiveScores() {
+                       async function loadLiveScores() {
                 const loadingEl = document.getElementById('live-scores-loading');
                 const listEl = document.getElementById('live-scores-list');
                 const emptyEl = document.getElementById('live-scores-empty');
@@ -744,33 +741,91 @@
                     const data = await res.json();
                     const games = data.games;
 
-                    // Filter live or finished matches
-                    const sortedGames = games.filter(g => {
-                        const isFinished = g.finished === 'TRUE';
-                        const isLive = g.finished === 'FALSE' && g.time_elapsed !== 'notstarted';
-                        return isLive || isFinished;
-                    }).sort((a, b) => {
-                        const aLive = a.finished === 'FALSE' && a.time_elapsed !== 'notstarted';
-                        const bLive = b.finished === 'FALSE' && b.time_elapsed !== 'notstarted';
-                        if (aLive && !bLive) return -1;
-                        if (!aLive && bLive) return 1;
-                        return parseInt(b.id) - parseInt(a.id);
+                    // Get today's date in local browser timezone (MM/DD/YYYY format)
+                    const today = new Date();
+                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                    const day = String(today.getDate()).padStart(2, '0');
+                    const year = today.getFullYear();
+                    const todayFormatted = `${month}/${day}/${year}`;
+
+                    // Filter matches for today
+                    let matchesToShow = games.filter(g => {
+                        if (!g.local_date) return false;
+                        const matchDate = g.local_date.split(' ')[0];
+                        return matchDate === todayFormatted;
                     });
 
-                    if (sortedGames.length === 0) {
+                    let dateMessageHTML = '';
+
+                    if (matchesToShow.length === 0) {
+                        // Find closest date with matches
+                        const allDates = [...new Set(games.filter(g => g.local_date).map(g => g.local_date.split(' ')[0]))];
+                        if (allDates.length > 0) {
+                            const todayMs = today.getTime();
+                            allDates.sort((a, b) => {
+                                const distA = Math.abs(new Date(a).getTime() - todayMs);
+                                const distB = Math.abs(new Date(b).getTime() - todayMs);
+                                return distA - distB;
+                            });
+                            const closestDate = allDates[0];
+                            matchesToShow = games.filter(g => g.local_date && g.local_date.split(' ')[0] === closestDate);
+                            
+                            const [m, d, y] = closestDate.split('/');
+                            dateMessageHTML = `
+                                <div class="col-span-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-400 flex items-center gap-2 mb-2">
+                                    <span class="material-icons text-indigo-400 text-sm">info</span>
+                                    <span>Hoy no hay partidos programados. Mostrando jornada del <strong>${d}/${m}/${y}</strong>.</span>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        const [m, d, y] = todayFormatted.split('/');
+                        dateMessageHTML = `
+                            <div class="col-span-full bg-indigo-500/5 border border-indigo-500/10 rounded-xl px-4 py-2.5 text-xs text-indigo-300 flex items-center gap-2 mb-2">
+                                <span class="material-icons text-indigo-400 text-sm">today</span>
+                                <span>Partidos programados para hoy: <strong>${d}/${m}/${y}</strong></span>
+                            </div>
+                        `;
+                    }
+
+                    if (matchesToShow.length === 0) {
                         loadingEl.classList.add('hidden');
                         emptyEl.classList.remove('hidden');
                         return;
                     }
 
+                    // Sort to show live matches first
+                    matchesToShow.sort((a, b) => {
+                        const aLive = a.finished === 'FALSE' && a.time_elapsed !== 'notstarted';
+                        const bLive = b.finished === 'FALSE' && b.time_elapsed !== 'notstarted';
+                        if (aLive && !bLive) return -1;
+                        if (!aLive && bLive) return 1;
+                        return parseInt(a.id) - parseInt(b.id);
+                    });
+
                     const getFlagUrl = (code) => {
                         if (!code) return 'https://placehold.co/80x50/1e293b/cbd5e1?text=TBD';
-                        return `https://flagcdn.com/w80/${code.toLowerCase()}.png`;
+                        const codeMap = {
+                            'MEX': 'mx', 'BRA': 'br', 'ARG': 'ar', 'USA': 'us', 'CAN': 'ca',
+                            'ESP': 'es', 'FRA': 'fr', 'GER': 'de', 'ENG': 'gb', 'POR': 'pt',
+                            'NED': 'nl', 'BEL': 'be', 'CRO': 'hr', 'URU': 'uy', 'KOR': 'kr',
+                            'JPN': 'jp', 'SEN': 'sn', 'MAR': 'ma', 'SUI': 'ch', 'GHA': 'gh',
+                            'CMR': 'cm', 'ECU': 'ec', 'KSA': 'sa', 'IRN': 'ir', 'AUS': 'au',
+                            'CRC': 'cr', 'POL': 'pl', 'TUN': 'tn', 'DEN': 'dk', 'SRB': 'rs',
+                            'WAL': 'gb-wls', 'QAT': 'qa', 'RSA': 'za', 'PAR': 'py', 'SCO': 'gb-sct',
+                            'CIV': 'ci', 'COL': 'co', 'PAN': 'pa', 'AUT': 'at', 'ALG': 'dz',
+                            'JOR': 'jo', 'NZL': 'nz', 'EGY': 'eg', 'UZB': 'uz', 'HAI': 'ht',
+                            'CUR': 'cw', 'NOR': 'no',
+                            'CPV': 'cv', 'COD': 'cd', 'IRQ': 'iq', 'BIH': 'ba', 'SWE': 'se', 'TUR': 'tr', 'CZE': 'cz'
+                        };
+                        const mapped = codeMap[code] || 'un';
+                        return `https://flagcdn.com/w80/${mapped}.png`;
                     };
 
-                    listEl.innerHTML = sortedGames.map(g => {
+                    listEl.innerHTML = dateMessageHTML + matchesToShow.map(g => {
                         const isLive = g.finished === 'FALSE' && g.time_elapsed !== 'notstarted';
                         const isFinished = g.finished === 'TRUE';
+                        const isPending = !isLive && !isFinished;
 
                         const homeCode = resolveTeamCode(g.home_team_name_en);
                         const awayCode = resolveTeamCode(g.away_team_name_en);
@@ -798,23 +853,48 @@
                         const homeScorersHTML = parseScorers(g.home_scorers);
                         const awayScorersHTML = parseScorers(g.away_scorers);
 
-                        let scoreBadgeHTML = '';
-                        if (isLive) {
-                            scoreBadgeHTML = `
-                                <div class="flex flex-col items-center gap-1">
+                        let centerHTML = '';
+                        let badgeHTML = '';
+
+                        if (isPending) {
+                            const timeStr = g.local_date ? g.local_date.split(' ')[1] : '--:--';
+                            centerHTML = `
+                                <div class="flex flex-col items-center justify-center">
+                                    <span class="text-xs font-semibold text-slate-500 mb-1">VS</span>
+                                    <div class="px-3 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5 text-xs text-slate-300 font-medium">
+                                        <span class="material-icons text-slate-400 text-xs">schedule</span>
+                                        ${timeStr}
+                                    </div>
+                                </div>
+                            `;
+                            badgeHTML = `
+                                <div class="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase tracking-wider border border-indigo-500/20">
+                                    Programado
+                                </div>
+                            `;
+                        } else {
+                            centerHTML = `
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl font-black text-white">${g.home_score}</span>
+                                    <span class="text-slate-600 font-bold">-</span>
+                                    <span class="text-3xl font-black text-white">${g.away_score}</span>
+                                </div>
+                            `;
+
+                            if (isLive) {
+                                badgeHTML = `
                                     <div class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 animate-pulse border border-red-500/20">
                                         <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                                        EN VIVO
+                                        ${g.time_elapsed}
                                     </div>
-                                    <span class="text-xs font-bold text-indigo-400">${g.time_elapsed}</span>
-                                </div>
-                            `;
-                        } else if (isFinished) {
-                            scoreBadgeHTML = `
-                                <div class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wider border border-white/5">
-                                    Finalizado
-                                </div>
-                            `;
+                                `;
+                            } else if (isFinished) {
+                                badgeHTML = `
+                                    <div class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wider border border-white/5">
+                                        Finalizado
+                                    </div>
+                                `;
+                            }
                         }
 
                         const groupName = g.group === 'R32' ? '16vos de Final' :
@@ -838,14 +918,10 @@
                                         <div class="mt-2 w-full max-h-[60px] overflow-y-auto no-scrollbar">${homeScorersHTML}</div>
                                     </div>
 
-                                    <!-- Score -->
+                                    <!-- Score/Time Center -->
                                     <div class="flex flex-col items-center justify-center gap-2">
-                                        <div class="flex items-center gap-3">
-                                            <span class="text-3xl font-black text-white">${g.home_score}</span>
-                                            <span class="text-slate-600 font-bold">-</span>
-                                            <span class="text-3xl font-black text-white">${g.away_score}</span>
-                                        </div>
-                                        ${scoreBadgeHTML}
+                                        ${centerHTML}
+                                        ${badgeHTML}
                                     </div>
 
                                     <!-- Team B -->
