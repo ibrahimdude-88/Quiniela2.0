@@ -333,8 +333,8 @@ function renderMatchesTable() {
             96: { homeSrc: 85, awaySrc: 87 },
             // Semis — matchday 7
             97: { homeSrc: 89, awaySrc: 90 },
-            98: { homeSrc: 91, awaySrc: 92 },
-            99: { homeSrc: 93, awaySrc: 94 },
+            98: { homeSrc: 93, awaySrc: 94 },
+            99: { homeSrc: 91, awaySrc: 92 },
             100: { homeSrc: 95, awaySrc: 96 },
             // Semi-finals matchday 7
             101: { homeSrc: 97, awaySrc: 98 },
@@ -2266,10 +2266,10 @@ async function advanceBracketWinners() {
         // 8vos (89-96) -> Cuartos (97-100)
         { src: 89, dest: 97, slot: 'home', win: true },
         { src: 90, dest: 97, slot: 'away', win: true },
-        { src: 91, dest: 98, slot: 'home', win: true },
-        { src: 92, dest: 98, slot: 'away', win: true },
-        { src: 93, dest: 99, slot: 'home', win: true },
-        { src: 94, dest: 99, slot: 'away', win: true },
+        { src: 93, dest: 98, slot: 'home', win: true },
+        { src: 94, dest: 98, slot: 'away', win: true },
+        { src: 91, dest: 99, slot: 'home', win: true },
+        { src: 92, dest: 99, slot: 'away', win: true },
         { src: 95, dest: 100, slot: 'home', win: true },
         { src: 96, dest: 100, slot: 'away', win: true },
         // Cuartos (97-100) -> Semis (101-102)
@@ -2515,8 +2515,8 @@ window.automateBracket = async () => {
             { id: 96, home: 'W85', away: 'W87' },
             // QUARTERS (Cuartos) - Matches 97-100
             { id: 97, home: 'W89', away: 'W90' },
-            { id: 98, home: 'W91', away: 'W92' },
-            { id: 99, home: 'W93', away: 'W94' },
+            { id: 98, home: 'W93', away: 'W94' },
+            { id: 99, home: 'W91', away: 'W92' },
             { id: 100, home: 'W95', away: 'W96' },
             // SEMIS - Matches 101-102
             { id: 101, home: 'W97', away: 'W98' },
