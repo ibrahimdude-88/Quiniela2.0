@@ -778,14 +778,23 @@
                     const todayDay = today.getDate();
 
                     // Convert all games to the user's browser local timezone dynamically
-                    const resolvedGames = games.map(g => {
+                     const resolvedGames = games.map(g => {
                         if (!g.local_date) return null;
                         
-                        const [datePart, timePart] = g.local_date.split(' ');
+                        let stadiumId = g.stadium_id;
+                        let localTimeStr = g.local_date;
+
+                        // Hotfix for Match 76 (Brazil vs Japan) API feed discrepancy
+                        if (g.id === "76") {
+                            stadiumId = "10"; // NRG Stadium, Houston (CDT, offset -5)
+                            localTimeStr = "06/29/2026 12:00"; // 12:00 PM local Houston time (17:00 UTC)
+                        }
+
+                        const [datePart, timePart] = localTimeStr.split(' ');
                         const [month, day, year] = datePart.split('/');
                         const [hour, minute] = timePart.split(':');
                         
-                        const offset = STADIUM_TIMEZONES[g.stadium_id] || -5;
+                        const offset = STADIUM_TIMEZONES[stadiumId] || -5;
                         // Construct UTC timestamp: UTC = local time - offset
                         const utcMs = Date.UTC(
                             parseInt(year),
