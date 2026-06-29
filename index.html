@@ -876,10 +876,13 @@
                         return;
                     }
 
-                    // Sort: show live games first, then by match number
+                    // Sort by kickoff time chronologically
                     gamesToShow.sort((a, b) => {
-                        if (a.isLive && !b.isLive) return -1;
-                        if (!a.isLive && b.isLive) return 1;
+                        const timeA = a.matchLocalDate.getTime();
+                        const timeB = b.matchLocalDate.getTime();
+                        if (timeA !== timeB) {
+                            return timeA - timeB;
+                        }
                         return a.id - b.id;
                     });
 
