@@ -3296,4 +3296,245 @@ window.renderViewerPredictions = () => {
     }).join('');
 };
 
+window.syncMatchesFromWiki = async () => {
+    if (!confirm('¿Estás seguro de sincronizar los marcadores de eliminatorias desde Wikipedia?\n\nEsto buscará resultados reales en Wikipedia y los actualizará en la base de datos automáticamente.')) return;
+
+    // Reuse the progress modal from automateBracket!
+    const modal = document.getElementById('bracket-progress-modal');
+    const inner = document.getElementById('bracket-progress-inner');
+    const barEl = document.getElementById('bpm-bar');
+    const pctEl = document.getElementById('bpm-pct');
+    const labelEl = document.getElementById('bpm-step-label');
+    const stepsEl = document.getElementById('bpm-steps');
+    const titleEl = document.getElementById('bpm-title');
+    const iconEl = document.getElementById('bpm-icon');
+
+    const showProgress = () => {
+        stepsEl.innerHTML = '';
+        barEl.style.width = '0%';
+        pctEl.textContent = '0%';
+        titleEl.textContent = 'Sincronizando con Wikipedia...';
+        iconEl.textContent = 'cloud_download';
+        iconEl.className = 'material-icons text-indigo-400 text-xl';
+        labelEl.textContent = 'Iniciando...';
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            modal.style.opacity = '1';
+            if (inner) inner.style.transform = 'scale(1)';
+        });
+    };
+
+    const setProgress = (pct, label) => {
+        barEl.style.width = pct + '%';
+        pctEl.textContent = pct + '%';
+        if (label) labelEl.textContent = label;
+    };
+
+    const addStep = (text, type = 'info') => {
+        const colors = {
+            info: 'text-slate-400',
+            success: 'text-emerald-400',
+            warn: 'text-yellow-400',
+            error: 'text-red-400',
+        };
+        const icons = {
+            info: 'radio_button_unchecked',
+            success: 'check_circle',
+            warn: 'warning',
+            error: 'error',
+        };
+        const div = document.createElement('div');
+        div.className = `step-item flex items-start gap-2 text-xs ${colors[type] || colors.info}`;
+        div.innerHTML = `<span class="material-icons text-xs mt-0.5 flex-shrink-0">${icons[type] || icons.info}</span><span>${text}</span>`;
+        stepsEl.appendChild(div);
+        stepsEl.scrollTop = stepsEl.scrollHeight;
+    };
+
+    showProgress();
+
+    try {
+        setProgress(10, 'Descargando datos...');
+        addStep('Obteniendo página de Wikipedia (mediante Proxy CORS)...', 'info');
+
+        const wikiUrl = 'https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage';
+        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(wikiUrl);
+        
+        const res = await fetch(proxyUrl);
+        if (!res.ok) throw new Error('No se pudo conectar al proxy de Wikipedia.');
+        const html = await res.text();
+
+        addStep('Página de Wikipedia descargada con éxito ✓', 'success');
+        setProgress(30, 'Parseando partidos...');
+
+        const boxes = html.split('class="footballbox"');
+        addStep(`Se encontraron ${boxes.length - 1} partidos en Wikipedia.`, 'info');
+
+        const ENGLISH_TRANSLATIONS = {
+            'México': 'Mexico', 'Brasil': 'Brazil', 'Estados Unidos': 'United States',
+            'Canadá': 'Canada', 'España': 'Spain', 'Francia': 'France', 'Alemania': 'Germany',
+            'Inglaterra': 'England', 'Países Bajos': 'Netherlands', 'Bélgica': 'Belgium',
+            'Croacia': 'Croatia', 'Japón': 'Japan', 'Marruecos': 'Morocco', 'Suiza': 'Switzerland',
+            'Camerún': 'Cameroon', 'Arabia Saudita': 'Saudi Arabia', 'Irán': 'Iran',
+            'Polonia': 'Poland', 'Túnez': 'Tunisia', 'Dinamarca': 'Denmark', 'Gales': 'Wales',
+            'Sudáfrica': 'South Africa', 'Escocia': 'Scotland', 'Costa de Marfil': 'Ivory Coast',
+            'Cabo Verde': 'Cape Verde', 'RD Congo': 'DR Congo', 'Irak': 'Iraq',
+            'Bosnia y Herz.': 'Bosnia and Herzegovina', 'Suecia': 'Sweden', 'Turquía': 'Turkey',
+            'Rep. Checa': 'Czech Republic', 'Egipto': 'Egypt', 'Argelia': 'Algeria',
+            'Jordania': 'Jordan', 'Nueva Zelanda': 'New Zealand', 'Uzbekistán': 'Uzbekistan',
+            'Haití': 'Haiti', 'Curazao': 'Curacao', 'Noruega': 'Norway'
+        };
+
+        const TEAM_MAPPING = {};
+        Object.entries(TEAM_NAMES).forEach(([code, name]) => {
+            TEAM_MAPPING[name.toLowerCase()] = code;
+            if (ENGLISH_TRANSLATIONS[name]) {
+                TEAM_MAPPING[ENGLISH_TRANSLATIONS[name].toLowerCase()] = code;
+            }
+        });
+
+        const resolveTeamCode = (name) => {
+            const cleaned = name.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+            if (TEAM_MAPPING[cleaned]) return TEAM_MAPPING[cleaned];
+            for (const [key, code] of Object.entries(TEAM_MAPPING)) {
+                if (cleaned.includes(key) || key.includes(cleaned)) return code;
+            }
+            return null;
+        };
+
+        setProgress(50, 'Cruzando con base de datos...');
+        let updatedCount = 0;
+
+        for (let i = 1; i < boxes.length; i++) {
+            const box = boxes[i];
+
+            // Home Team
+            const homeMatch = box.match(/class="fhome"[^>]*>([\s\S]*?)<\/th>/);
+            let homeTeam = '';
+            if (homeMatch) {
+                const homeContent = homeMatch[1];
+                const linkMatch = homeContent.match(/<a [^>]*>([^<]+)<\/a>/);
+                homeTeam = linkMatch ? linkMatch[1] : homeContent.replace(/<[^>]*>/g, '').trim();
+            }
+
+            // Away Team
+            const awayMatch = box.match(/class="faway"[^>]*>([\s\S]*?)<\/th>/);
+            let awayTeam = '';
+            if (awayMatch) {
+                const awayContent = awayMatch[1];
+                const linkMatch = awayContent.match(/<a [^>]*>([^<]+)<\/a>/);
+                awayTeam = linkMatch ? linkMatch[1] : awayContent.replace(/<[^>]*>/g, '').trim();
+            }
+
+            // Score
+            const scoreMatch = box.match(/class="fscore"[^>]*>([\s\S]*?)<\/th>/);
+            let scoreText = '';
+            let homeScore = null;
+            let awayScore = null;
+            if (scoreMatch) {
+                scoreText = scoreMatch[1].replace(/<[^>]*>/g, '').trim();
+                const numericMatch = scoreText.match(/(\d+)[\u2013\-s](\d+)/);
+                if (numericMatch) {
+                    homeScore = parseInt(numericMatch[1]);
+                    awayScore = parseInt(numericMatch[2]);
+                }
+            }
+
+            // Penalties
+            let penaltyWinner = null;
+            let penaltyScoreText = '';
+            if (box.includes('Penalties') || box.includes('Penalty shoot-out')) {
+                const penaltiesBlock = box.split(/Penalties|Penalty shoot-out/)[1];
+                const penScoreMatch = penaltiesBlock.match(/<th>(\d+)[\u2013\-](?:\d+)?(\d+)<\/th>/) || penaltiesBlock.match(/(\d+)[\u2013\-](\d+)/);
+                if (penScoreMatch) {
+                    const homePen = parseInt(penScoreMatch[1]);
+                    const awayPen = parseInt(penScoreMatch[2]);
+                    penaltyScoreText = `${homePen}-${awayPen}`;
+                    penaltyWinner = homePen > awayPen ? 'home' : 'away';
+                }
+            }
+
+            const homeCode = resolveTeamCode(homeTeam);
+            const awayCode = resolveTeamCode(awayTeam);
+
+            if (!homeCode || !awayCode || homeScore === null || awayScore === null) continue;
+
+            const matchInDb = matches.find(m => 
+                (m.home_team === homeCode && m.away_team === awayCode) || 
+                (m.home_team === awayCode && m.away_team === homeCode)
+            );
+
+            if (matchInDb) {
+                const realHomeScore = matchInDb.home_team === homeCode ? homeScore : awayScore;
+                const realAwayScore = matchInDb.home_team === homeCode ? awayScore : homeScore;
+                const realPenaltyWinner = matchInDb.home_team === homeCode ? penaltyWinner : (penaltyWinner === 'home' ? 'away' : (penaltyWinner === 'away' ? 'home' : null));
+
+                const needsUpdate = matchInDb.status !== 'f' || 
+                                     matchInDb.home_score !== realHomeScore || 
+                                     matchInDb.away_score !== realAwayScore ||
+                                     matchInDb.penalty_winner !== realPenaltyWinner;
+
+                if (needsUpdate) {
+                    addStep(`Actualizando Partido #${matchInDb.id}: ${matchInDb.home_team} vs ${matchInDb.away_team} -> Score: ${realHomeScore}-${realAwayScore}`, 'info');
+                    
+                    const { error: updErr } = await supabaseAdmin.from('matches').update({
+                        home_score: realHomeScore,
+                        away_score: realAwayScore,
+                        penalty_winner: realPenaltyWinner,
+                        status: 'f'
+                    }).eq('id', matchInDb.id);
+
+                    if (updErr) {
+                        addStep(`Error en Partido #${matchInDb.id}: ${updErr.message}`, 'error');
+                    } else {
+                        updatedCount++;
+                        // Recalculate prediction points for this match immediately
+                        await calculatePointsManually(matchInDb.id, realHomeScore, realAwayScore);
+                    }
+                }
+            }
+        }
+
+        setProgress(75, 'Ejecutando cálculos de llaves...');
+        addStep(`Sincronización de Wikipedia completada. ${updatedCount} partidos actualizados.`, 'success');
+
+        if (updatedCount > 0) {
+            addStep('Avanzando ganadores en el bracket...', 'info');
+            await advanceBracketWinners();
+            addStep('Ganadores avanzados ✓', 'success');
+
+            addStep('Recalculando tabla de posiciones global de usuarios...', 'info');
+            await updateAllProfilesPoints();
+            addStep('Tabla de puntuación recalculada ✓', 'success');
+
+            // Refresh local arrays and UI
+            await loadMatches();
+            await loadUsers();
+            await calculateStandings();
+            if (typeof renderBracketEditor === 'function') {
+                renderBracketEditor();
+            }
+        }
+
+        setProgress(100, 'Completado');
+        titleEl.textContent = '¡Sincronización completada!';
+        iconEl.textContent = 'check_circle';
+        iconEl.className = 'material-icons text-emerald-400 text-xl';
+        barEl.style.background = '#10b981';
+
+        setTimeout(() => {
+            modal.style.opacity = '0';
+            if (inner) inner.style.transform = 'scale(0.92)';
+            setTimeout(() => modal.classList.add('hidden'), 280);
+        }, 1500);
+
+    } catch (err) {
+        console.error(err);
+        addStep(`Error: ${err.message}`, 'error');
+        titleEl.textContent = 'Ocurrió un error';
+        iconEl.textContent = 'error';
+        iconEl.className = 'material-icons text-red-400 text-xl';
+        setProgress(100, 'Error');
+    }
+};
+
 
