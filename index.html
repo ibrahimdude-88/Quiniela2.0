@@ -464,7 +464,7 @@
             class="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
             <div
                 class="bg-surface-dark w-full max-w-5xl mx-4 rounded-2xl border border-white/10 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col h-[85vh]">
-                <div class="p-5 border-b border-white/10 flex justify-between items-center bg-background-dark flex-wrap gap-4">
+                <div class="p-5 border-b border-white/10 flex justify-between items-center bg-background-dark">
                     <h3 class="text-lg font-bold flex items-center gap-2 text-white">
                         <span class="flex h-3.5 w-3.5 relative">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -472,26 +472,35 @@
                         </span>
                         Partidos en Vivo (Mundial 2026)
                     </h3>
-                    <div class="flex items-center gap-2">
-                        <button onclick="setLiveScoresSource('sofascore')" id="btn-src-sofascore"
-                            class="px-3 py-1 rounded-full text-xs font-bold transition-all bg-indigo-500 text-white border border-indigo-500/30">
-                            Sofascore (Filtro Mundial)
+                    <div class="flex items-center gap-3">
+                        <button onclick="loadLiveScores()"
+                            class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors" title="Actualizar">
+                            <span class="material-icons text-sm">refresh</span>
                         </button>
-                        <button onclick="setLiveScoresSource('scorebat')" id="btn-src-scorebat"
-                            class="px-3 py-1 rounded-full text-xs font-bold transition-all bg-surface-dark text-slate-400 border border-white/5 hover:text-white hover:bg-white/5">
-                            ScoreBat (Global en Vivo)
+                        <button onclick="closeLiveScoresModal()"
+                            class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+                            <span class="material-icons text-sm">close</span>
                         </button>
                     </div>
-                    <button onclick="closeLiveScoresModal()"
-                        class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
-                        <span class="material-icons text-sm">close</span>
-                    </button>
                 </div>
-                <div class="flex-1 overflow-hidden relative bg-slate-950">
-                    <iframe id="live-scores-iframe" 
-                        src="" 
-                        class="w-full h-full border-none" 
-                        allow="autoplay"></iframe>
+                <div class="flex-1 overflow-y-auto relative bg-background-dark p-6" id="live-scores-container">
+                    <!-- Loading Spinner -->
+                    <div id="live-scores-loading" class="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+                        <span class="material-icons animate-spin text-4xl text-indigo-400">sync</span>
+                        <p class="font-semibold text-sm">Cargando marcadores en vivo...</p>
+                    </div>
+
+                    <!-- Matches List -->
+                    <div id="live-scores-list" class="grid gap-6 md:grid-cols-2 hidden">
+                        <!-- Matches cards injected dynamically -->
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="live-scores-empty" class="flex flex-col items-center justify-center py-20 text-center text-slate-500 hidden max-w-md mx-auto">
+                        <span class="material-icons text-5xl text-slate-600 mb-4">sports_soccer</span>
+                        <h4 class="text-white font-bold text-lg mb-2">No hay partidos activos hoy</h4>
+                        <p class="text-xs">No hay encuentros jugándose en este instante. Vuelve a revisar cuando inicie la jornada del día.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -681,36 +690,183 @@
                 const bracketModal = document.getElementById('bracket-modal');
                 if (bracketModal && bracketModal.style.display === 'flex') window.toggleBracket();
             }
-            let currentLiveSource = 'sofascore';
             function openLiveScoresModal() {
                 openModal('live-scores-modal');
-                setLiveScoresSource(currentLiveSource);
+                loadLiveScores();
             }
             function closeLiveScoresModal() {
                 closeModal('live-scores-modal');
-                const iframe = document.getElementById('live-scores-iframe');
-                if (iframe) {
-                    iframe.removeAttribute('src'); // Detener el iframe para liberar recursos
-                }
             }
-            function setLiveScoresSource(source) {
-                currentLiveSource = source;
-                const iframe = document.getElementById('live-scores-iframe');
-                const btnSofascore = document.getElementById('btn-src-sofascore');
-                const btnScorebat = document.getElementById('btn-src-scorebat');
+            function resolveTeamCode(name) {
+                if (!name) return null;
+                const cleaned = name.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+                
+                const ENGLISH_TRANSLATIONS = {
+                    'mexico': 'MEX', 'brazil': 'BRA', 'united states': 'USA',
+                    'canada': 'CAN', 'spain': 'ESP', 'france': 'FRA', 'germany': 'GER',
+                    'england': 'ENG', 'netherlands': 'NED', 'belgium': 'BEL',
+                    'croatia': 'CRO', 'japan': 'JPN', 'morocco': 'MAR', 'switzerland': 'SUI',
+                    'cameroon': 'CMR', 'saudi arabia': 'KSA', 'iran': 'IRN',
+                    'poland': 'POL', 'tunisia': 'TUN', 'denmark': 'DEN', 'wales': 'WAL',
+                    'south africa': 'RSA', 'scotland': 'SCO', 'ivory coast': 'CIV', "côte d'ivoire": 'CIV',
+                    'cape verde': 'CPV', 'dr congo': 'COD', 'iraq': 'IRQ',
+                    'bosnia and herzegovina': 'BIH', 'sweden': 'SWE', 'turkey': 'TUR',
+                    'czech republic': 'CZE', 'egypt': 'EGY', 'algeria': 'ALG',
+                    'jordan': 'JOR', 'new zealand': 'NZL', 'uzbekistan': 'UZB',
+                    'haiti': 'HAI', 'curacao': 'CUR', 'norway': 'NOR'
+                };
+                if (ENGLISH_TRANSLATIONS[cleaned]) return ENGLISH_TRANSLATIONS[cleaned];
 
-                if (!iframe) return;
+                if (typeof TEAM_NAMES !== 'undefined') {
+                    for (const [code, val] of Object.entries(TEAM_NAMES)) {
+                        const valCleaned = val.toLowerCase();
+                        if (cleaned === valCleaned || cleaned.includes(valCleaned) || valCleaned.includes(cleaned)) {
+                            return code;
+                        }
+                    }
+                }
+                return null;
+            }
+            async function loadLiveScores() {
+                const loadingEl = document.getElementById('live-scores-loading');
+                const listEl = document.getElementById('live-scores-list');
+                const emptyEl = document.getElementById('live-scores-empty');
 
-                if (source === 'sofascore') {
-                    // El dominio widgets.sofascore.com sí permite ser embebido en iframes
-                    iframe.src = 'https://widgets.sofascore.com/en/embed/tournament/16/matches?widgetTheme=dark';
-                    if (btnSofascore) btnSofascore.className = 'px-3 py-1 rounded-full text-xs font-bold transition-all bg-indigo-500 text-white border border-indigo-500/30';
-                    if (btnScorebat) btnScorebat.className = 'px-3 py-1 rounded-full text-xs font-bold transition-all bg-surface-dark text-slate-400 border border-white/5 hover:text-white hover:bg-white/5';
-                } else if (source === 'scorebat') {
-                    // Alternativa global sin restricciones
-                    iframe.src = 'https://www.scorebat.com/embed/livescore/';
-                    if (btnScorebat) btnScorebat.className = 'px-3 py-1 rounded-full text-xs font-bold transition-all bg-indigo-500 text-white border border-indigo-500/30';
-                    if (btnSofascore) btnSofascore.className = 'px-3 py-1 rounded-full text-xs font-bold transition-all bg-surface-dark text-slate-400 border border-white/5 hover:text-white hover:bg-white/5';
+                if (!loadingEl || !listEl || !emptyEl) return;
+
+                loadingEl.classList.remove('hidden');
+                listEl.classList.add('hidden');
+                emptyEl.classList.add('hidden');
+
+                try {
+                    const res = await fetch('https://worldcup26.ir/get/games');
+                    if (!res.ok) throw new Error('API error');
+                    const data = await res.json();
+                    const games = data.games;
+
+                    // Filter live or finished matches
+                    const sortedGames = games.filter(g => {
+                        const isFinished = g.finished === 'TRUE';
+                        const isLive = g.finished === 'FALSE' && g.time_elapsed !== 'notstarted';
+                        return isLive || isFinished;
+                    }).sort((a, b) => {
+                        const aLive = a.finished === 'FALSE' && a.time_elapsed !== 'notstarted';
+                        const bLive = b.finished === 'FALSE' && b.time_elapsed !== 'notstarted';
+                        if (aLive && !bLive) return -1;
+                        if (!aLive && bLive) return 1;
+                        return parseInt(b.id) - parseInt(a.id);
+                    });
+
+                    if (sortedGames.length === 0) {
+                        loadingEl.classList.add('hidden');
+                        emptyEl.classList.remove('hidden');
+                        return;
+                    }
+
+                    const getFlagUrl = (code) => {
+                        if (!code) return 'https://placehold.co/80x50/1e293b/cbd5e1?text=TBD';
+                        return `https://flagcdn.com/w80/${code.toLowerCase()}.png`;
+                    };
+
+                    listEl.innerHTML = sortedGames.map(g => {
+                        const isLive = g.finished === 'FALSE' && g.time_elapsed !== 'notstarted';
+                        const isFinished = g.finished === 'TRUE';
+
+                        const homeCode = resolveTeamCode(g.home_team_name_en);
+                        const awayCode = resolveTeamCode(g.away_team_name_en);
+
+                        const homeFlag = getFlagUrl(homeCode);
+                        const awayFlag = getFlagUrl(awayCode);
+
+                        const parseScorers = (scorersJson) => {
+                            if (!scorersJson || scorersJson === 'null') return '';
+                            try {
+                                const clean = scorersJson.replace(/[{}"]/g, '');
+                                if (!clean) return '';
+                                const list = clean.split(',');
+                                return list.map(s => `
+                                    <div class="text-[10px] text-slate-400 flex items-center gap-1">
+                                        <span class="material-icons text-[10px] text-emerald-400">sports_soccer</span>
+                                        ${s.trim()}
+                                    </div>
+                                `).join('');
+                            } catch (e) {
+                                return '';
+                            }
+                        };
+
+                        const homeScorersHTML = parseScorers(g.home_scorers);
+                        const awayScorersHTML = parseScorers(g.away_scorers);
+
+                        let scoreBadgeHTML = '';
+                        if (isLive) {
+                            scoreBadgeHTML = `
+                                <div class="flex flex-col items-center gap-1">
+                                    <div class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 animate-pulse border border-red-500/20">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                                        EN VIVO
+                                    </div>
+                                    <span class="text-xs font-bold text-indigo-400">${g.time_elapsed}</span>
+                                </div>
+                            `;
+                        } else if (isFinished) {
+                            scoreBadgeHTML = `
+                                <div class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wider border border-white/5">
+                                    Finalizado
+                                </div>
+                            `;
+                        }
+
+                        const groupName = g.group === 'R32' ? '16vos de Final' :
+                                          g.group === 'R16' ? 'Octavos de Final' :
+                                          g.group === 'QF' ? 'Cuartos de Final' :
+                                          g.group === 'SF' ? 'Semifinal' :
+                                          g.group === '3rd' ? 'Tercer Lugar' :
+                                          g.group === 'FI' ? 'Final' : `Grupo ${g.group}`;
+
+                        return `
+                            <div class="bg-surface-dark border border-white/10 rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col justify-between transition-all hover:border-white/20">
+                                <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
+                                    <span>${groupName}</span>
+                                    <span>Partido #${g.id}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4 mb-4">
+                                    <!-- Team A -->
+                                    <div class="flex flex-col items-center text-center flex-1 min-w-0">
+                                        <img src="${homeFlag}" class="w-10 h-6 object-cover rounded shadow-sm mb-2 border border-white/5 bg-slate-800">
+                                        <span class="text-sm font-bold text-white truncate w-full">${g.home_team_name_en}</span>
+                                        <div class="mt-2 w-full max-h-[60px] overflow-y-auto no-scrollbar">${homeScorersHTML}</div>
+                                    </div>
+
+                                    <!-- Score -->
+                                    <div class="flex flex-col items-center justify-center gap-2">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-3xl font-black text-white">${g.home_score}</span>
+                                            <span class="text-slate-600 font-bold">-</span>
+                                            <span class="text-3xl font-black text-white">${g.away_score}</span>
+                                        </div>
+                                        ${scoreBadgeHTML}
+                                    </div>
+
+                                    <!-- Team B -->
+                                    <div class="flex flex-col items-center text-center flex-1 min-w-0">
+                                        <img src="${awayFlag}" class="w-10 h-6 object-cover rounded shadow-sm mb-2 border border-white/5 bg-slate-800">
+                                        <span class="text-sm font-bold text-white truncate w-full">${g.away_team_name_en}</span>
+                                        <div class="mt-2 w-full max-h-[60px] overflow-y-auto no-scrollbar">${awayScorersHTML}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    loadingEl.classList.add('hidden');
+                    listEl.classList.remove('hidden');
+
+                } catch (e) {
+                    console.error('Error fetching live scores:', e);
+                    loadingEl.classList.add('hidden');
+                    listEl.classList.add('hidden');
+                    emptyEl.classList.remove('hidden');
                 }
             }
         </script>

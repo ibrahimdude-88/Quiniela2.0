@@ -3354,20 +3354,15 @@ window.syncMatchesFromWiki = async () => {
 
     try {
         setProgress(10, 'Descargando datos...');
-        addStep('Obteniendo página de Wikipedia (mediante Proxy CORS)...', 'info');
+        addStep('Obteniendo partidos en vivo desde API (worldcup26.ir)...', 'info');
 
-        const wikiUrl = 'https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage';
-        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(wikiUrl);
-        
-        const res = await fetch(proxyUrl);
-        if (!res.ok) throw new Error('No se pudo conectar al proxy de Wikipedia.');
-        const html = await res.text();
+        const apiRes = await fetch('https://worldcup26.ir/get/games');
+        if (!apiRes.ok) throw new Error('No se pudo conectar a la API de partidos en vivo.');
+        const apiData = await apiRes.json();
+        const games = apiData.games;
 
-        addStep('Página de Wikipedia descargada con éxito ✓', 'success');
-        setProgress(30, 'Parseando partidos...');
-
-        const boxes = html.split('class="footballbox"');
-        addStep(`Se encontraron ${boxes.length - 1} partidos en Wikipedia.`, 'info');
+        addStep(`Se obtuvieron ${games.length} partidos de la API ✓`, 'success');
+        setProgress(30, 'Parseando y cruzando con base de datos...');
 
         const ENGLISH_TRANSLATIONS = {
             'México': 'Mexico', 'Brasil': 'Brazil', 'Estados Unidos': 'United States',
@@ -3393,6 +3388,7 @@ window.syncMatchesFromWiki = async () => {
         });
 
         const resolveTeamCode = (name) => {
+            if (!name) return null;
             const cleaned = name.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
             if (TEAM_MAPPING[cleaned]) return TEAM_MAPPING[cleaned];
             for (const [key, code] of Object.entries(TEAM_MAPPING)) {
@@ -3401,93 +3397,117 @@ window.syncMatchesFromWiki = async () => {
             return null;
         };
 
-        setProgress(50, 'Cruzando con base de datos...');
         let updatedCount = 0;
+        let finishedUpdates = 0;
 
-        for (let i = 1; i < boxes.length; i++) {
-            const box = boxes[i];
-
-            // Home Team
-            const homeMatch = box.match(/class="fhome"[^>]*>([\s\S]*?)<\/th>/);
-            let homeTeam = '';
-            if (homeMatch) {
-                const homeContent = homeMatch[1];
-                const linkMatch = homeContent.match(/<a [^>]*>([^<]+)<\/a>/);
-                homeTeam = linkMatch ? linkMatch[1] : homeContent.replace(/<[^>]*>/g, '').trim();
-            }
-
-            // Away Team
-            const awayMatch = box.match(/class="faway"[^>]*>([\s\S]*?)<\/th>/);
-            let awayTeam = '';
-            if (awayMatch) {
-                const awayContent = awayMatch[1];
-                const linkMatch = awayContent.match(/<a [^>]*>([^<]+)<\/a>/);
-                awayTeam = linkMatch ? linkMatch[1] : awayContent.replace(/<[^>]*>/g, '').trim();
-            }
-
-            // Score
-            const scoreMatch = box.match(/class="fscore"[^>]*>([\s\S]*?)<\/th>/);
-            let scoreText = '';
-            let homeScore = null;
-            let awayScore = null;
-            if (scoreMatch) {
-                scoreText = scoreMatch[1].replace(/<[^>]*>/g, '').trim();
-                const numericMatch = scoreText.match(/(\d+)[\u2013\-s](\d+)/);
-                if (numericMatch) {
-                    homeScore = parseInt(numericMatch[1]);
-                    awayScore = parseInt(numericMatch[2]);
+        // Wikipedia fallback function for tie breakers
+        const getWikiPenaltyWinner = async (homeCode, awayCode) => {
+            addStep(`[Wiki] Consultando desempate por penaltis para ${homeCode} vs ${awayCode}...`, 'info');
+            const wikiUrl = 'https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage';
+            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(wikiUrl);
+            const wRes = await fetch(proxyUrl);
+            if (!wRes.ok) return null;
+            const wHtml = await wRes.text();
+            const wBoxes = wHtml.split('class="footballbox"');
+            for (let i = 1; i < wBoxes.length; i++) {
+                const box = wBoxes[i];
+                const hMatch = box.match(/class="fhome"[^>]*>([\s\S]*?)<\/th>/);
+                let hTeam = '';
+                if (hMatch) {
+                    const hContent = hMatch[1];
+                    const linkMatch = hContent.match(/<a [^>]*>([^<]+)<\/a>/);
+                    hTeam = linkMatch ? linkMatch[1] : hContent.replace(/<[^>]*>/g, '').trim();
+                }
+                const aMatch = box.match(/class="faway"[^>]*>([\s\S]*?)<\/th>/);
+                let aTeam = '';
+                if (aMatch) {
+                    const aContent = aMatch[1];
+                    const linkMatch = aContent.match(/<a [^>]*>([^<]+)<\/a>/);
+                    aTeam = linkMatch ? linkMatch[1] : aContent.replace(/<[^>]*>/g, '').trim();
+                }
+                const hc = resolveTeamCode(hTeam);
+                const ac = resolveTeamCode(aTeam);
+                if (hc === homeCode && ac === awayCode) {
+                    if (box.includes('Penalties') || box.includes('Penalty shoot-out')) {
+                        const penaltiesBlock = box.split(/Penalties|Penalty shoot-out/)[1];
+                        const penScoreMatch = penaltiesBlock.match(/<th>(\d+)[\u2013\-](?:\d+)?(\d+)<\/th>/) || penaltiesBlock.match(/(\d+)[\u2013\-](\d+)/);
+                        if (penScoreMatch) {
+                            const homePen = parseInt(penScoreMatch[1]);
+                            const awayPen = parseInt(penScoreMatch[2]);
+                            return homePen > awayPen ? 'home' : 'away';
+                        }
+                    }
                 }
             }
+            return null;
+        };
 
-            // Penalties
-            let penaltyWinner = null;
-            let penaltyScoreText = '';
-            if (box.includes('Penalties') || box.includes('Penalty shoot-out')) {
-                const penaltiesBlock = box.split(/Penalties|Penalty shoot-out/)[1];
-                const penScoreMatch = penaltiesBlock.match(/<th>(\d+)[\u2013\-](?:\d+)?(\d+)<\/th>/) || penaltiesBlock.match(/(\d+)[\u2013\-](\d+)/);
-                if (penScoreMatch) {
-                    const homePen = parseInt(penScoreMatch[1]);
-                    const awayPen = parseInt(penScoreMatch[2]);
-                    penaltyScoreText = `${homePen}-${awayPen}`;
-                    penaltyWinner = homePen > awayPen ? 'home' : 'away';
-                }
-            }
+        for (const game of games) {
+            const homeTeamName = game.home_team_name_en;
+            const awayTeamName = game.away_team_name_en;
+            if (!homeTeamName || !awayTeamName) continue;
 
-            const homeCode = resolveTeamCode(homeTeam);
-            const awayCode = resolveTeamCode(awayTeam);
-
-            if (!homeCode || !awayCode || homeScore === null || awayScore === null) continue;
+            const homeCode = resolveTeamCode(homeTeamName);
+            const awayCode = resolveTeamCode(awayTeamName);
+            if (!homeCode || !awayCode) continue;
 
             const matchInDb = matches.find(m => 
                 (m.home_team === homeCode && m.away_team === awayCode) || 
                 (m.home_team === awayCode && m.away_team === homeCode)
             );
 
-            if (matchInDb) {
-                const realHomeScore = matchInDb.home_team === homeCode ? homeScore : awayScore;
-                const realAwayScore = matchInDb.home_team === homeCode ? awayScore : homeScore;
-                const realPenaltyWinner = matchInDb.home_team === homeCode ? penaltyWinner : (penaltyWinner === 'home' ? 'away' : (penaltyWinner === 'away' ? 'home' : null));
+            if (!matchInDb) continue;
 
-                const needsUpdate = matchInDb.status !== 'f' || 
-                                     matchInDb.home_score !== realHomeScore || 
-                                     matchInDb.away_score !== realAwayScore ||
-                                     matchInDb.penalty_winner !== realPenaltyWinner;
+            const isFinished = game.finished === 'TRUE';
+            const isLive = game.finished === 'FALSE' && game.time_elapsed !== 'notstarted';
 
-                if (needsUpdate) {
-                    addStep(`Actualizando Partido #${matchInDb.id}: ${matchInDb.home_team} vs ${matchInDb.away_team} -> Score: ${realHomeScore}-${realAwayScore}`, 'info');
-                    
-                    const { error: updErr } = await supabaseAdmin.from('matches').update({
-                        home_score: realHomeScore,
-                        away_score: realAwayScore,
-                        penalty_winner: realPenaltyWinner,
-                        status: 'f'
-                    }).eq('id', matchInDb.id);
+            const apiHomeScore = parseInt(game.home_score);
+            const apiAwayScore = parseInt(game.away_score);
+            
+            let status = 'p'; // pending
+            let liveMinute = null;
+            let realHomeScore = null;
+            let realAwayScore = null;
 
-                    if (updErr) {
-                        addStep(`Error en Partido #${matchInDb.id}: ${updErr.message}`, 'error');
-                    } else {
-                        updatedCount++;
-                        // Recalculate prediction points for this match immediately
+            if (isFinished) {
+                status = 'f';
+                realHomeScore = matchInDb.home_team === homeCode ? apiHomeScore : apiAwayScore;
+                realAwayScore = matchInDb.home_team === homeCode ? apiAwayScore : apiHomeScore;
+            } else if (isLive) {
+                status = 'live';
+                liveMinute = game.time_elapsed;
+                realHomeScore = matchInDb.home_team === homeCode ? apiHomeScore : apiAwayScore;
+                realAwayScore = matchInDb.home_team === homeCode ? apiAwayScore : apiHomeScore;
+            }
+
+            let realPenaltyWinner = null;
+            if (status === 'f' && realHomeScore === realAwayScore && matchInDb.matchday >= 4) {
+                realPenaltyWinner = await getWikiPenaltyWinner(matchInDb.home_team, matchInDb.away_team);
+            }
+
+            const needsUpdate = matchInDb.status !== status ||
+                                 matchInDb.home_score !== realHomeScore ||
+                                 matchInDb.away_score !== realAwayScore ||
+                                 matchInDb.live_minute !== liveMinute ||
+                                 matchInDb.penalty_winner !== realPenaltyWinner;
+
+            if (needsUpdate) {
+                addStep(`Actualizando Partido #${matchInDb.id}: ${matchInDb.home_team} vs ${matchInDb.away_team} -> Score: ${realHomeScore}-${realAwayScore}, Status: ${status}, Min: ${liveMinute}`, 'info');
+                
+                const { error: updErr } = await supabaseAdmin.from('matches').update({
+                    home_score: realHomeScore,
+                    away_score: realAwayScore,
+                    status: status,
+                    live_minute: liveMinute,
+                    penalty_winner: realPenaltyWinner
+                }).eq('id', matchInDb.id);
+
+                if (updErr) {
+                    addStep(`Error en Partido #${matchInDb.id}: ${updErr.message}`, 'error');
+                } else {
+                    updatedCount++;
+                    if (status === 'f') {
+                        finishedUpdates++;
                         await calculatePointsManually(matchInDb.id, realHomeScore, realAwayScore);
                     }
                 }
@@ -3495,9 +3515,9 @@ window.syncMatchesFromWiki = async () => {
         }
 
         setProgress(75, 'Ejecutando cálculos de llaves...');
-        addStep(`Sincronización de Wikipedia completada. ${updatedCount} partidos actualizados.`, 'success');
+        addStep(`Sincronización completada. ${updatedCount} partidos actualizados.`, 'success');
 
-        if (updatedCount > 0) {
+        if (finishedUpdates > 0) {
             addStep('Avanzando ganadores en el bracket...', 'info');
             await advanceBracketWinners();
             addStep('Ganadores avanzados ✓', 'success');
@@ -3505,14 +3525,14 @@ window.syncMatchesFromWiki = async () => {
             addStep('Recalculando tabla de posiciones global de usuarios...', 'info');
             await updateAllProfilesPoints();
             addStep('Tabla de puntuación recalculada ✓', 'success');
+        }
 
-            // Refresh local arrays and UI
-            await loadMatches();
-            await loadUsers();
-            await calculateStandings();
-            if (typeof renderBracketEditor === 'function') {
-                renderBracketEditor();
-            }
+        // Refresh local arrays and UI
+        await loadMatches();
+        await loadUsers();
+        await calculateStandings();
+        if (typeof renderBracketEditor === 'function') {
+            renderBracketEditor();
         }
 
         setProgress(100, 'Completado');

@@ -19,48 +19,20 @@ const TEAM_NAMES = {
 };
 
 const ENGLISH_TRANSLATIONS = {
-    'México': 'Mexico',
-    'Brasil': 'Brazil',
-    'Estados Unidos': 'United States',
-    'Canadá': 'Canada',
-    'España': 'Spain',
-    'Francia': 'France',
-    'Alemania': 'Germany',
-    'Inglaterra': 'England',
-    'Países Bajos': 'Netherlands',
-    'Bélgica': 'Belgium',
-    'Croacia': 'Croatia',
-    'Japón': 'Japan',
-    'Marruecos': 'Morocco',
-    'Suiza': 'Switzerland',
-    'Camerún': 'Cameroon',
-    'Arabia Saudita': 'Saudi Arabia',
-    'Irán': 'Iran',
-    'Polonia': 'Poland',
-    'Túnez': 'Tunisia',
-    'Dinamarca': 'Denmark',
-    'Gales': 'Wales',
-    'Sudáfrica': 'South Africa',
-    'Escocia': 'Scotland',
-    'Costa de Marfil': 'Ivory Coast',
-    'Cabo Verde': 'Cape Verde',
-    'RD Congo': 'DR Congo',
-    'Irak': 'Iraq',
-    'Bosnia y Herz.': 'Bosnia and Herzegovina',
-    'Suecia': 'Sweden',
-    'Turquía': 'Turkey',
-    'Rep. Checa': 'Czech Republic',
-    'Egipto': 'Egypt',
-    'Argelia': 'Algeria',
-    'Jordania': 'Jordan',
-    'Nueva Zelanda': 'New Zealand',
-    'Uzbekistán': 'Uzbekistan',
-    'Haití': 'Haiti',
-    'Curazao': 'Curacao',
-    'Noruega': 'Norway'
+    'México': 'Mexico', 'Brasil': 'Brazil', 'Estados Unidos': 'United States',
+    'Canadá': 'Canada', 'España': 'Spain', 'Francia': 'France', 'Alemania': 'Germany',
+    'Inglaterra': 'England', 'Países Bajos': 'Netherlands', 'Bélgica': 'Belgium',
+    'Croacia': 'Croatia', 'Japón': 'Japan', 'Marruecos': 'Morocco', 'Suiza': 'Switzerland',
+    'Camerún': 'Cameroon', 'Arabia Saudita': 'Saudi Arabia', 'Irán': 'Iran',
+    'Polonia': 'Poland', 'Túnez': 'Tunisia', 'Dinamarca': 'Denmark', 'Gales': 'Wales',
+    'Sudáfrica': 'South Africa', 'Escocia': 'Scotland', 'Costa de Marfil': 'Ivory Coast',
+    'Cabo Verde': 'Cape Verde', 'RD Congo': 'DR Congo', 'Irak': 'Iraq',
+    'Bosnia y Herz.': 'Bosnia and Herzegovina', 'Suecia': 'Sweden', 'Turquía': 'Turkey',
+    'Rep. Checa': 'Czech Republic', 'Egipto': 'Egypt', 'Argelia': 'Algeria',
+    'Jordania': 'Jordan', 'Nueva Zelanda': 'New Zealand', 'Uzbekistán': 'Uzbekistan',
+    'Haití': 'Haiti', 'Curazao': 'Curacao', 'Noruega': 'Norway'
 };
 
-// Build team mapping dynamically
 const TEAM_MAPPING = {};
 Object.entries(TEAM_NAMES).forEach(([code, name]) => {
     TEAM_MAPPING[name.toLowerCase()] = code;
@@ -78,6 +50,56 @@ function resolveTeamCode(name) {
     if (TEAM_MAPPING[cleaned]) return TEAM_MAPPING[cleaned];
     for (const [key, code] of Object.entries(TEAM_MAPPING)) {
         if (cleaned.includes(key) || key.includes(cleaned)) return code;
+    }
+    return null;
+}
+
+// Fallback to Wikipedia to get penalty winner if knockout match ends in a draw
+async function getWikiPenaltyWinner(homeCode, awayCode) {
+    try {
+        console.log(`[WIKI FALLBACK] Fetching Wikipedia to resolve penalty winner for ${homeCode} vs ${awayCode}...`);
+        const res = await fetch('https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage');
+        const html = await res.text();
+
+        const boxes = html.split('class="footballbox"');
+        for (let i = 1; i < boxes.length; i++) {
+            const box = boxes[i];
+
+            // Parse Home Team
+            const homeMatch = box.match(/class="fhome"[^>]*>([\s\S]*?)<\/th>/);
+            let homeTeam = '';
+            if (homeMatch) {
+                const homeContent = homeMatch[1];
+                const linkMatch = homeContent.match(/<a [^>]*>([^<]+)<\/a>/);
+                homeTeam = linkMatch ? linkMatch[1] : homeContent.replace(/<[^>]*>/g, '').trim();
+            }
+
+            // Parse Away Team
+            const awayMatch = box.match(/class="faway"[^>]*>([\s\S]*?)<\/th>/);
+            let awayTeam = '';
+            if (awayMatch) {
+                const awayContent = awayMatch[1];
+                const linkMatch = awayContent.match(/<a [^>]*>([^<]+)<\/a>/);
+                awayTeam = linkMatch ? linkMatch[1] : awayContent.replace(/<[^>]*>/g, '').trim();
+            }
+
+            const hCode = resolveTeamCode(homeTeam);
+            const aCode = resolveTeamCode(awayTeam);
+
+            if (hCode === homeCode && aCode === awayCode) {
+                if (box.includes('Penalties') || box.includes('Penalty shoot-out')) {
+                    const penaltiesBlock = box.split(/Penalties|Penalty shoot-out/)[1];
+                    const penScoreMatch = penaltiesBlock.match(/<th>(\d+)[\u2013\-](?:\d+)?(\d+)<\/th>/) || penaltiesBlock.match(/(\d+)[\u2013\-](\d+)/);
+                    if (penScoreMatch) {
+                        const homePen = parseInt(penScoreMatch[1]);
+                        const awayPen = parseInt(penScoreMatch[2]);
+                        return homePen > awayPen ? 'home' : 'away';
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Wikipedia fallback error:', e);
     }
     return null;
 }
@@ -158,7 +180,6 @@ async function updateAllProfilesPoints() {
         userExacts[u.id] = 0;
     });
 
-    // We also re-query prediction details to find exact matches safely
     const { data: fullPreds } = await supabaseAdmin.from('predictions').select('user_id, match_id, home_score, away_score, penalty_winner, points_earned');
 
     fullPreds.forEach(p => {
@@ -185,14 +206,12 @@ async function updateAllProfilesPoints() {
     }
 }
 
-// Automatically advance bracket winners in database
 async function advanceBracketWinners() {
     console.log('Advancing bracket winners...');
     const { data: matches } = await supabaseAdmin.from('matches').select('*');
     if (!matches) return;
 
     const feedMap = [
-        // 16vos (73-88) -> 8vos (89-96)
         { src: 74, dest: 89, slot: 'home', win: true },
         { src: 77, dest: 89, slot: 'away', win: true },
         { src: 73, dest: 90, slot: 'home', win: true },
@@ -209,7 +228,6 @@ async function advanceBracketWinners() {
         { src: 88, dest: 95, slot: 'away', win: true },
         { src: 85, dest: 96, slot: 'home', win: true },
         { src: 87, dest: 96, slot: 'away', win: true },
-        // 8vos (89-96) -> Cuartos (97-100)
         { src: 89, dest: 97, slot: 'home', win: true },
         { src: 90, dest: 97, slot: 'away', win: true },
         { src: 93, dest: 98, slot: 'home', win: true },
@@ -218,12 +236,10 @@ async function advanceBracketWinners() {
         { src: 92, dest: 99, slot: 'away', win: true },
         { src: 95, dest: 100, slot: 'home', win: true },
         { src: 96, dest: 100, slot: 'away', win: true },
-        // Cuartos (97-100) -> Semis (101-102)
         { src: 97, dest: 101, slot: 'home', win: true },
         { src: 98, dest: 101, slot: 'away', win: true },
         { src: 99, dest: 102, slot: 'home', win: true },
         { src: 100, dest: 102, slot: 'away', win: true },
-        // Semis (101-102) -> Final (104) y 3er lugar (103)
         { src: 101, dest: 104, slot: 'home', win: true },
         { src: 102, dest: 104, slot: 'away', win: true },
         { src: 101, dest: 103, slot: 'home', win: false },
@@ -267,122 +283,100 @@ async function advanceBracketWinners() {
 }
 
 async function run() {
-    console.log('Fetching live Wikipedia Knockout Stage page...');
-    const res = await fetch('https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage');
-    const html = await res.text();
+    console.log('Fetching live scores from worldcup26.ir API...');
+    const apiRes = await fetch('https://worldcup26.ir/get/games');
+    const apiData = await apiRes.json();
+    const games = apiData.games;
+    console.log(`Loaded ${games.length} games from API.`);
 
-    const boxes = html.split('class="footballbox"');
-    console.log(`Parsed ${boxes.length - 1} matches from Wikipedia.`);
-
-    const { data: dbMatches, error: dbErr } = await supabaseAdmin.from('matches').select('*').gte('id', 73).lte('id', 104);
+    const { data: dbMatches, error: dbErr } = await supabaseAdmin.from('matches').select('*');
     if (dbErr) {
         console.error('Error fetching matches from DB:', dbErr);
         return;
     }
-    console.log(`Fetched ${dbMatches.length} knockout matches from Supabase.`);
+    console.log(`Fetched ${dbMatches.length} matches from Supabase.`);
 
     let updatedCount = 0;
+    let finishedUpdates = 0;
 
-    for (let i = 1; i < boxes.length; i++) {
-        const box = boxes[i];
+    for (const game of games) {
+        const homeTeamName = game.home_team_name_en;
+        const awayTeamName = game.away_team_name_en;
+        if (!homeTeamName || !awayTeamName) continue;
+        
+        const homeCode = resolveTeamCode(homeTeamName);
+        const awayCode = resolveTeamCode(awayTeamName);
 
-        // Parse Home Team
-        const homeMatch = box.match(/class="fhome"[^>]*>([\s\S]*?)<\/th>/);
-        let homeTeam = '';
-        if (homeMatch) {
-            const homeContent = homeMatch[1];
-            const linkMatch = homeContent.match(/<a [^>]*>([^<]+)<\/a>/);
-            homeTeam = linkMatch ? linkMatch[1] : homeContent.replace(/<[^>]*>/g, '').trim();
-        }
+        if (!homeCode || !awayCode) continue;
 
-        // Parse Away Team
-        const awayMatch = box.match(/class="faway"[^>]*>([\s\S]*?)<\/th>/);
-        let awayTeam = '';
-        if (awayMatch) {
-            const awayContent = awayMatch[1];
-            const linkMatch = awayContent.match(/<a [^>]*>([^<]+)<\/a>/);
-            awayTeam = linkMatch ? linkMatch[1] : awayContent.replace(/<[^>]*>/g, '').trim();
-        }
-
-        // Parse Score
-        const scoreMatch = box.match(/class="fscore"[^>]*>([\s\S]*?)<\/th>/);
-        let scoreText = '';
-        let homeScore = null;
-        let awayScore = null;
-        if (scoreMatch) {
-            scoreText = scoreMatch[1].replace(/<[^>]*>/g, '').trim();
-            const numericMatch = scoreText.match(/(\d+)[\u2013\-s](\d+)/);
-            if (numericMatch) {
-                homeScore = parseInt(numericMatch[1]);
-                awayScore = parseInt(numericMatch[2]);
-            }
-        }
-
-        // Parse Penalties
-        let penaltyWinner = null;
-        let penaltyScoreText = '';
-        if (box.includes('Penalties') || box.includes('Penalty shoot-out')) {
-            const penaltiesBlock = box.split(/Penalties|Penalty shoot-out/)[1];
-            const penScoreMatch = penaltiesBlock.match(/<th>(\d+)[\u2013\-](?:\d+)?(\d+)<\/th>/) || penaltiesBlock.match(/(\d+)[\u2013\-](\d+)/);
-            if (penScoreMatch) {
-                const homePen = parseInt(penScoreMatch[1]);
-                const awayPen = parseInt(penScoreMatch[2]);
-                penaltyScoreText = `${homePen}-${awayPen}`;
-                penaltyWinner = homePen > awayPen ? 'home' : 'away';
-            }
-        }
-
-        const homeCode = resolveTeamCode(homeTeam);
-        const awayCode = resolveTeamCode(awayTeam);
-
-        if (!homeCode || !awayCode) {
-            // Future placeholder or invalid team
-            continue;
-        }
-
-        if (homeScore === null || awayScore === null) {
-            // Not played yet
-            continue;
-        }
-
-        // Find match in DB
+        // Try to match the game in our database
+        // Matches are unique by home_team + away_team in group stage and populated knockout matches
         const matchInDb = dbMatches.find(m => 
             (m.home_team === homeCode && m.away_team === awayCode) || 
             (m.home_team === awayCode && m.away_team === homeCode)
         );
 
-        if (matchInDb) {
-            const realHomeScore = matchInDb.home_team === homeCode ? homeScore : awayScore;
-            const realAwayScore = matchInDb.home_team === homeCode ? awayScore : homeScore;
-            const realPenaltyWinner = matchInDb.home_team === homeCode ? penaltyWinner : (penaltyWinner === 'home' ? 'away' : (penaltyWinner === 'away' ? 'home' : null));
+        if (!matchInDb) continue;
 
-            // Check if DB needs update
-            const needsUpdate = matchInDb.status !== 'f' || 
-                                 matchInDb.home_score !== realHomeScore || 
-                                 matchInDb.away_score !== realAwayScore ||
-                                 matchInDb.penalty_winner !== realPenaltyWinner;
+        const isFinished = game.finished === 'TRUE';
+        const isLive = game.finished === 'FALSE' && game.time_elapsed !== 'notstarted';
 
-            if (needsUpdate) {
-                console.log(`[UPDATE] Match ${matchInDb.id}: ${matchInDb.home_team} vs ${matchInDb.away_team} -> Score: ${realHomeScore}-${realAwayScore} (Penalties: ${realPenaltyWinner || 'None'})`);
-                
-                await supabaseAdmin.from('matches').update({
-                    home_score: realHomeScore,
-                    away_score: realAwayScore,
-                    penalty_winner: realPenaltyWinner,
-                    status: 'f'
-                }).eq('id', matchInDb.id);
+        const apiHomeScore = parseInt(game.home_score);
+        const apiAwayScore = parseInt(game.away_score);
+        
+        let status = 'p'; // pending
+        let liveMinute = null;
+        let realHomeScore = null;
+        let realAwayScore = null;
 
-                updatedCount++;
+        if (isFinished) {
+            status = 'f';
+            realHomeScore = matchInDb.home_team === homeCode ? apiHomeScore : apiAwayScore;
+            realAwayScore = matchInDb.home_team === homeCode ? apiAwayScore : apiHomeScore;
+        } else if (isLive) {
+            status = 'live';
+            liveMinute = game.time_elapsed; // E.g., "75'", "HT", etc.
+            realHomeScore = matchInDb.home_team === homeCode ? apiHomeScore : apiAwayScore;
+            realAwayScore = matchInDb.home_team === homeCode ? apiAwayScore : apiHomeScore;
+        }
 
-                // Recalculate prediction points for this match immediately
+        // Handle penalty winner fallback for finished knockout ties
+        let realPenaltyWinner = null;
+        if (status === 'f' && realHomeScore === realAwayScore && matchInDb.matchday >= 4) {
+            // Fetch from Wikipedia since the API doesn't specify penalty winner
+            realPenaltyWinner = await getWikiPenaltyWinner(matchInDb.home_team, matchInDb.away_team);
+        }
+
+        const needsUpdate = matchInDb.status !== status ||
+                             matchInDb.home_score !== realHomeScore ||
+                             matchInDb.away_score !== realAwayScore ||
+                             matchInDb.live_minute !== liveMinute ||
+                             matchInDb.penalty_winner !== realPenaltyWinner;
+
+        if (needsUpdate) {
+            console.log(`[UPDATE] Match ${matchInDb.id}: ${matchInDb.home_team} vs ${matchInDb.away_team} -> Score: ${realHomeScore}-${realAwayScore}, Status: ${status}, Minute: ${liveMinute}, Pen: ${realPenaltyWinner}`);
+            
+            await supabaseAdmin.from('matches').update({
+                home_score: realHomeScore,
+                away_score: realAwayScore,
+                status: status,
+                live_minute: liveMinute,
+                penalty_winner: realPenaltyWinner
+            }).eq('id', matchInDb.id);
+
+            updatedCount++;
+
+            if (status === 'f') {
+                finishedUpdates++;
+                // Recalculate prediction points immediately
                 await recalculatePointsAndProfiles(matchInDb.id, realHomeScore, realAwayScore, realPenaltyWinner);
             }
         }
     }
 
-    console.log(`Scraper completed. Updated ${updatedCount} matches.`);
+    console.log(`Scraper completed. Updated ${updatedCount} matches. Finished matches updated: ${finishedUpdates}`);
 
-    if (updatedCount > 0) {
+    if (finishedUpdates > 0) {
         // Advance winners in bracket and update profile totals
         await advanceBracketWinners();
         await updateAllProfilesPoints();
