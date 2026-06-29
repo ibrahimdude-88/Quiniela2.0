@@ -743,40 +743,104 @@
                 emptyEl.classList.add('hidden');
 
                 try {
-                    // Fetch live feed to get real-time score, elapsed time, scorers
+                    // Fetch live feed to get real-time score, elapsed time, scorers, local stadium dates
                     const res = await fetch('https://worldcup26.ir/get/games');
                     if (!res.ok) throw new Error('API error');
                     const data = await res.json();
                     const games = data.games || [];
 
-                    // Get today's local date (e.g. "6/29/2026")
-                    const today = new Date();
-                    const todayLocalDateStr = today.toLocaleDateString('en-US');
+                    // Stadium local timezone offset mapping during summer/DST 2026
+                    const STADIUM_TIMEZONES = {
+                        '1': -6,  // Estadio Azteca, Mexico City (CST, no DST)
+                        '2': -7,  // SoFi Stadium, Los Angeles (PDT)
+                        '3': -6,  // Estadio BBVA, Monterrey (CST, no DST)
+                        '4': -7,  // BC Place, Vancouver (PDT)
+                        '5': -4,  // MetLife Stadium, New York/NJ (EDT)
+                        '6': -6,  // Estadio Akron, Guadalajara (CST, no DST)
+                        '7': -4,  // Hard Rock Stadium, Miami (EDT)
+                        '8': -7,  // Lumen Field, Seattle (PDT)
+                        '9': -4,  // Gillette Stadium, Boston (EDT)
+                        '10': -5, // NRG Stadium, Houston (CDT)
+                        '11': -4, // Mercedes-Benz Stadium, Atlanta (EDT)
+                        '12': -4, // BMO Field, Toronto (EDT)
+                        '13': -4, // Lincoln Financial Field, Philadelphia (EDT)
+                        '14': -7, // Levi's Stadium, San Francisco (PDT)
+                        '15': -5, // Arrowhead Stadium, Kansas City (CDT)
+                        '16': -5  // AT&T Stadium, Dallas (CDT)
+                    };
 
-                    // Filter matches in local timezone for today
-                    let matchesToShow = (window.matches || []).filter(m => {
-                        if (!m.date) return false;
-                        const matchLocalDateStr = new Date(m.date).toLocaleDateString('en-US');
-                        return matchLocalDateStr === todayLocalDateStr;
+                    const today = new Date();
+                    const todayYear = today.getFullYear();
+                    const todayMonth = today.getMonth();
+                    const todayDay = today.getDate();
+
+                    // Convert all games to the user's browser local timezone dynamically
+                    const resolvedGames = games.map(g => {
+                        if (!g.local_date) return null;
+                        
+                        const [datePart, timePart] = g.local_date.split(' ');
+                        const [month, day, year] = datePart.split('/');
+                        const [hour, minute] = timePart.split(':');
+                        
+                        const offset = STADIUM_TIMEZONES[g.stadium_id] || -5;
+                        // Construct UTC timestamp: UTC = local time - offset
+                        const utcMs = Date.UTC(
+                            parseInt(year),
+                            parseInt(month) - 1,
+                            parseInt(day),
+                            parseInt(hour) - offset,
+                            parseInt(minute)
+                        );
+                        
+                        const matchLocalDate = new Date(utcMs);
+                        const isFinished = g.finished === 'TRUE';
+                        const isLive = g.finished === 'FALSE' && g.time_elapsed !== 'notstarted';
+
+                        return {
+                            apiGame: g,
+                            matchLocalDate,
+                            isLive,
+                            isFinished,
+                            id: parseInt(g.id)
+                        };
+                    }).filter(Boolean);
+
+                    // Filter games for today (local timezone)
+                    let gamesToShow = resolvedGames.filter(g => {
+                        const d = g.matchLocalDate;
+                        return d.getFullYear() === todayYear &&
+                               d.getMonth() === todayMonth &&
+                               d.getDate() === todayDay;
                     });
 
                     let dateMessageHTML = '';
 
-                    if (matchesToShow.length === 0) {
+                    if (gamesToShow.length === 0) {
                         // Find closest local date with matches
-                        const allLocalDates = [...new Set((window.matches || []).filter(m => m.date).map(m => new Date(m.date).toLocaleDateString('en-US')))];
+                        const localDatesMap = {};
+                        resolvedGames.forEach(g => {
+                            const d = g.matchLocalDate;
+                            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                            localDatesMap[key] = true;
+                        });
+                        
+                        const allLocalDates = Object.keys(localDatesMap);
                         if (allLocalDates.length > 0) {
                             const todayMs = today.getTime();
                             allLocalDates.sort((a, b) => {
-                                const distA = Math.abs(new Date(a).getTime() - todayMs);
-                                const distB = Math.abs(new Date(b).getTime() - todayMs);
+                                const distA = Math.abs(new Date(a + 'T12:00:00').getTime() - todayMs);
+                                const distB = Math.abs(new Date(b + 'T12:00:00').getTime() - todayMs);
                                 return distA - distB;
                             });
-                            const closestLocalDateStr = allLocalDates[0];
-                            matchesToShow = (window.matches || []).filter(m => m.date && new Date(m.date).toLocaleDateString('en-US') === closestLocalDateStr);
+                            const closestDateStr = allLocalDates[0];
+                            gamesToShow = resolvedGames.filter(g => {
+                                const d = g.matchLocalDate;
+                                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                return key === closestDateStr;
+                            });
                             
-                            const [mMonth, mDay, mYear] = closestLocalDateStr.split('/');
-                            const formattedDate = `${String(mDay).padStart(2, '0')}/${String(mMonth).padStart(2, '0')}/${mYear}`;
+                            const [y, m, d] = closestDateStr.split('-');
+                            const formattedDate = `${d}/${m}/${y}`;
                             dateMessageHTML = `
                                 <div class="col-span-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-400 flex items-center gap-2 mb-2">
                                     <span class="material-icons text-indigo-400 text-sm">info</span>
@@ -794,55 +858,17 @@
                         `;
                     }
 
-                    if (matchesToShow.length === 0) {
+                    if (gamesToShow.length === 0) {
                         loadingEl.classList.add('hidden');
                         emptyEl.classList.remove('hidden');
                         return;
                     }
 
-                    // Map DB matches to API game feed for live scores, elapsed time and scorers
-                    const resolvedGames = matchesToShow.map(m => {
-                        const apiGame = games.find(g => {
-                            const gHomeCode = resolveTeamCode(g.home_team_name_en);
-                            const gAwayCode = resolveTeamCode(g.away_team_name_en);
-                            return (m.home_team === gHomeCode && m.away_team === gAwayCode) ||
-                                   (m.home_team === gAwayCode && m.away_team === gHomeCode);
-                        });
-
-                        let isFinished = m.status === 'f';
-                        let isLive = m.status === 'live';
-                        let timeElapsed = m.live_minute || '';
-                        let homeScore = m.home_score;
-                        let awayScore = m.away_score;
-                        let apiGameData = apiGame || null;
-
-                        if (apiGame) {
-                            isFinished = apiGame.finished === 'TRUE';
-                            isLive = apiGame.finished === 'FALSE' && apiGame.time_elapsed !== 'notstarted';
-                            timeElapsed = apiGame.time_elapsed;
-
-                            const apiHomeCode = resolveTeamCode(apiGame.home_team_name_en);
-                            const isSwapped = m.home_team !== apiHomeCode;
-                            homeScore = isSwapped ? parseInt(apiGame.away_score) : parseInt(apiGame.home_score);
-                            awayScore = isSwapped ? parseInt(apiGame.home_score) : parseInt(apiGame.away_score);
-                        }
-
-                        return {
-                            dbMatch: m,
-                            apiGame: apiGameData,
-                            isLive,
-                            isFinished,
-                            timeElapsed,
-                            homeScore,
-                            awayScore
-                        };
-                    });
-
-                    // Sort to show live matches first
-                    resolvedGames.sort((a, b) => {
+                    // Sort: show live games first, then by match number
+                    gamesToShow.sort((a, b) => {
                         if (a.isLive && !b.isLive) return -1;
                         if (!a.isLive && b.isLive) return 1;
-                        return parseInt(a.dbMatch.id) - parseInt(b.dbMatch.id);
+                        return a.id - b.id;
                     });
 
                     const getFlagUrl = (code) => {
@@ -864,14 +890,20 @@
                         return `https://flagcdn.com/w80/${mapped}.png`;
                     };
 
-                    listEl.innerHTML = dateMessageHTML + resolvedGames.map(game => {
-                        const m = game.dbMatch;
+                    listEl.innerHTML = dateMessageHTML + gamesToShow.map(game => {
+                        const g = game.apiGame;
                         const isLive = game.isLive;
                         const isFinished = game.isFinished;
                         const isPending = !isLive && !isFinished;
 
-                        const homeFlag = getFlagUrl(m.home_team);
-                        const awayFlag = getFlagUrl(m.away_team);
+                        const homeCode = resolveTeamCode(g.home_team_name_en);
+                        const awayCode = resolveTeamCode(g.away_team_name_en);
+                        
+                        const homeName = _nameMap[homeCode] || g.home_team_name_en;
+                        const awayName = _nameMap[awayCode] || g.away_team_name_en;
+
+                        const homeFlag = getFlagUrl(homeCode);
+                        const awayFlag = getFlagUrl(awayCode);
 
                         const parseScorers = (scorersJson) => {
                             if (!scorersJson || scorersJson === 'null') return '';
@@ -890,23 +922,15 @@
                             }
                         };
 
-                        let homeScorersHTML = '';
-                        let awayScorersHTML = '';
-
-                        if (game.apiGame) {
-                            const apiHomeCode = resolveTeamCode(game.apiGame.home_team_name_en);
-                            const isSwapped = m.home_team !== apiHomeCode;
-                            homeScorersHTML = parseScorers(isSwapped ? game.apiGame.away_scorers : game.apiGame.home_scorers);
-                            awayScorersHTML = parseScorers(isSwapped ? game.apiGame.home_scorers : game.apiGame.away_scorers);
-                        }
+                        const homeScorersHTML = parseScorers(g.home_scorers);
+                        const awayScorersHTML = parseScorers(g.away_scorers);
 
                         let centerHTML = '';
                         let badgeHTML = '';
 
                         if (isPending) {
-                            // Convert UTC date to local time format (e.g. 7:00 PM) based on browser timezone
-                            const matchLocalDate = new Date(m.date);
-                            const timeStr = matchLocalDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                            // Convert UTC date to local time format based on browser timezone
+                            const timeStr = game.matchLocalDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
                             centerHTML = `
                                 <div class="flex flex-col items-center justify-center">
                                     <span class="text-xs font-semibold text-slate-500 mb-1">VS</span>
@@ -924,9 +948,9 @@
                         } else {
                             centerHTML = `
                                 <div class="flex items-center gap-3">
-                                    <span class="text-3xl font-black text-white">${game.homeScore !== null ? game.homeScore : 0}</span>
+                                    <span class="text-3xl font-black text-white">${g.home_score !== null ? g.home_score : 0}</span>
                                     <span class="text-slate-600 font-bold">-</span>
-                                    <span class="text-3xl font-black text-white">${game.awayScore !== null ? game.awayScore : 0}</span>
+                                    <span class="text-3xl font-black text-white">${g.away_score !== null ? g.away_score : 0}</span>
                                 </div>
                             `;
 
@@ -934,7 +958,7 @@
                                 badgeHTML = `
                                     <div class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 animate-pulse border border-red-500/20">
                                         <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                                        ${game.timeElapsed || 'Vivo'}
+                                        ${g.time_elapsed || 'Vivo'}
                                     </div>
                                 `;
                             } else if (isFinished) {
@@ -946,7 +970,7 @@
                             }
                         }
 
-                        const group = m.group_name;
+                        const group = g.group;
                         const groupName = group === 'R32' ? '16vos de Final' :
                                           group === 'R16' ? 'Octavos de Final' :
                                           group === 'QF' ? 'Cuartos de Final' :
@@ -954,14 +978,11 @@
                                           group === '3rd' ? 'Tercer Lugar' :
                                           group === 'FI' ? 'Final' : `Grupo ${group}`;
 
-                        const homeName = _nameMap[m.home_team] || m.home_team;
-                        const awayName = _nameMap[m.away_team] || m.away_team;
-
                         return `
                             <div class="bg-surface-dark border border-white/10 rounded-2xl p-5 shadow-lg relative overflow-hidden flex flex-col justify-between transition-all hover:border-white/20">
                                 <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
                                     <span>${groupName}</span>
-                                    <span>Partido #${m.id}</span>
+                                    <span>Partido #${g.id}</span>
                                 </div>
                                 <div class="flex items-center justify-between gap-4 mb-4">
                                     <!-- Team A -->
