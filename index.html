@@ -645,7 +645,7 @@
 
         <!-- Scripts for Modals -->
         <script>
-            function openModal(id) {
+             function openModal(id) {
                 if (id === 'ranking-modal') {
                     if (window.matches) {
                         const hasJ1Results = window.matches.some(m => m.matchday >= 1 && (m.status === 'f' || m.home_score !== null));
@@ -657,12 +657,13 @@
                 }
                 const modal = document.getElementById(id);
                 if (modal) {
+                    modal.style.display = 'flex';
                     modal.classList.remove('hidden');
                     setTimeout(() => {
                         modal.classList.remove('opacity-0');
                         const inner = modal.querySelector('div');
                         if (inner) {
-                            inner.classList.remove('scale-95');
+                            inner.classList.remove('scale-95', 'scale-50');
                             inner.classList.add('scale-100');
                         }
                     }, 10);
@@ -677,7 +678,10 @@
                         inner.classList.remove('scale-100');
                         inner.classList.add('scale-95');
                     }
-                    setTimeout(() => modal.classList.add('hidden'), 300);
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        modal.style.display = 'none';
+                    }, 300);
                 }
             }
             function closeAllModals() {
@@ -1217,7 +1221,7 @@
             class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md hidden opacity-0 transition-opacity duration-500">
             <div
                 class="bg-surface-dark w-full max-w-sm mx-4 rounded-3xl border border-white/10 shadow-2xl overflow-hidden transform scale-50 transition-transform duration-500 flex flex-col items-center p-8 relative isolate">
-                <button onclick="document.getElementById('ranking-celebration-modal').classList.add('hidden'); closeModal('ranking-celebration-modal')"
+                <button onclick="document.getElementById('ranking-celebration-modal').style.display='none'; document.getElementById('ranking-celebration-modal').classList.add('hidden'); closeModal('ranking-celebration-modal')"
                     class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors z-20">
                     <span class="material-icons text-sm">close</span>
                 </button>
@@ -1241,7 +1245,7 @@
                     <p class="text-sm text-slate-300 max-w-xs mx-auto" id="celebration-message">¡Sigue así!</p>
                 </div>
 
-                <button onclick="document.getElementById('ranking-celebration-modal').classList.add('hidden'); closeModal('ranking-celebration-modal')"
+                <button onclick="document.getElementById('ranking-celebration-modal').style.display='none'; document.getElementById('ranking-celebration-modal').classList.add('hidden'); closeModal('ranking-celebration-modal')"
                     class="mt-8 px-8 py-3 rounded-xl bg-primary hover:bg-emerald-500 text-white font-bold shadow-lg shadow-primary/25 transition-all w-full z-10">
                     Continuar
                 </button>

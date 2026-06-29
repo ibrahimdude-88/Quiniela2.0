@@ -1548,6 +1548,7 @@ window.showRankingCelebration = (rank) => {
     }
 
     // Show modal
+    modal.style.display = 'flex';
     modal.classList.remove('hidden');
     setTimeout(() => {
         modal.classList.remove('opacity-0');
