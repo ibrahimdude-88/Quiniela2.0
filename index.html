@@ -701,28 +701,31 @@
             function closeLiveScoresModal() {
                 closeModal('live-scores-modal');
             }
-            function resolveTeamCode(name) {
+             function resolveTeamCode(name) {
                 if (!name) return null;
                 const cleaned = name.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
                 
                 const ENGLISH_TRANSLATIONS = {
-                    'mexico': 'MEX', 'brazil': 'BRA', 'united states': 'USA',
+                    'mexico': 'MEX', 'brazil': 'BRA', 'argentina': 'ARG', 'united states': 'USA',
                     'canada': 'CAN', 'spain': 'ESP', 'france': 'FRA', 'germany': 'GER',
-                    'england': 'ENG', 'netherlands': 'NED', 'belgium': 'BEL',
-                    'croatia': 'CRO', 'japan': 'JPN', 'morocco': 'MAR', 'switzerland': 'SUI',
-                    'cameroon': 'CMR', 'saudi arabia': 'KSA', 'iran': 'IRN',
-                    'poland': 'POL', 'tunisia': 'TUN', 'denmark': 'DEN', 'wales': 'WAL',
-                    'south africa': 'RSA', 'scotland': 'SCO', 'ivory coast': 'CIV', "côte d'ivoire": 'CIV',
-                    'cape verde': 'CPV', 'dr congo': 'COD', 'iraq': 'IRQ',
-                    'bosnia and herzegovina': 'BIH', 'sweden': 'SWE', 'turkey': 'TUR',
-                    'czech republic': 'CZE', 'egypt': 'EGY', 'algeria': 'ALG',
-                    'jordan': 'JOR', 'new zealand': 'NZL', 'uzbekistan': 'UZB',
-                    'haiti': 'HAI', 'curacao': 'CUR', 'norway': 'NOR'
+                    'england': 'ENG', 'portugal': 'POR', 'netherlands': 'NED', 'belgium': 'BEL',
+                    'croatia': 'CRO', 'uruguay': 'URU', 'south korea': 'KOR', 'korea': 'KOR',
+                    'japan': 'JPN', 'senegal': 'SEN', 'morocco': 'MAR', 'switzerland': 'SUI',
+                    'ghana': 'GHA', 'cameroon': 'CMR', 'ecuador': 'ECU', 'saudi arabia': 'KSA',
+                    'iran': 'IRN', 'australia': 'AUS', 'costa rica': 'CRC', 'poland': 'POL',
+                    'tunisia': 'TUN', 'denmark': 'DEN', 'serbia': 'SRB', 'wales': 'WAL',
+                    'qatar': 'QAT', 'south africa': 'RSA', 'paraguay': 'PAR', 'scotland': 'SCO',
+                    'ivory coast': 'CIV', "côte d'ivoire": 'CIV', 'colombia': 'COL', 'panama': 'PAN',
+                    'austria': 'AUT', 'algeria': 'ALG', 'jordan': 'JOR', 'new zealand': 'NZL',
+                    'uzbekistan': 'UZB', 'haiti': 'HAI', 'curacao': 'CUR', 'norway': 'NOR',
+                    'cape verde': 'CPV', 'dr congo': 'COD', 'democratic republic of the congo': 'COD',
+                    'iraq': 'IRQ', 'bosnia and herzegovina': 'BIH', 'sweden': 'SWE', 'turkey': 'TUR',
+                    'czech republic': 'CZE'
                 };
                 if (ENGLISH_TRANSLATIONS[cleaned]) return ENGLISH_TRANSLATIONS[cleaned];
 
-                if (typeof TEAM_NAMES !== 'undefined') {
-                    for (const [code, val] of Object.entries(TEAM_NAMES)) {
+                if (typeof window.TEAM_NAMES !== 'undefined') {
+                    for (const [code, val] of Object.entries(window.TEAM_NAMES)) {
                         const valCleaned = val.toLowerCase();
                         if (cleaned === valCleaned || cleaned.includes(valCleaned) || valCleaned.includes(cleaned)) {
                             return code;

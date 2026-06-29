@@ -41,6 +41,7 @@ const TEAM_NAMES = {
     'CUR': 'Curazao', 'NOR': 'Noruega',
     'CPV': 'Cabo Verde', 'COD': 'RD Congo', 'IRQ': 'Irak', 'BIH': 'Bosnia y Herz.', 'SWE': 'Suecia', 'TUR': 'Turquía', 'CZE': 'Rep. Checa'
 };
+window.TEAM_NAMES = TEAM_NAMES;
 
 function friendlyTeamLabel(code) {
     if (!code) return 'Por definir';
