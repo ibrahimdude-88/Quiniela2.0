@@ -282,9 +282,37 @@ async function advanceBracketWinners() {
     }
 }
 
+async function fetchWithRetry(url, options = {}, retries = 5, backoff = 2000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+            
+            const res = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
+            if (!res.ok) {
+                throw new Error(`HTTP error! Status: ${res.status}`);
+            }
+            return res;
+        } catch (error) {
+            console.warn(`[FETCH TRY ${i + 1}/${retries} FAILED]:`, error.message || error);
+            if (i === retries - 1) {
+                throw error;
+            }
+            const delay = backoff * Math.pow(2, i);
+            console.log(`Waiting ${delay}ms before retrying...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
 async function run() {
     console.log('Fetching live scores from worldcup26.ir API...');
-    const apiRes = await fetch('https://worldcup26.ir/get/games');
+    const apiRes = await fetchWithRetry('https://worldcup26.ir/get/games');
     const apiData = await apiRes.json();
     const games = apiData.games;
     console.log(`Loaded ${games.length} games from API.`);
